@@ -57,6 +57,21 @@ func (p *Parser) glblStmt() GlblStmt {
 	return FuncDecl{}
 }
 
+func (p *Parser) stmt() Stmt {
+	t := p.cur()
+
+	if t.Data == "var" {
+		p.consume()
+		return p.varDecl()
+	}
+
+	expr := p.expr()
+	p.expectAndConsume(SEMI, "")
+	return ExprStmt{
+		Expr: expr,
+	}
+}
+
 func (p *Parser) varDecl() VarDecl {
 	t := p.expectAndConsume(IDENT, "")
 	name := t.Data
@@ -123,8 +138,9 @@ func (p *Parser) addExpr() Expr {
 
 		r := p.mulExpr()
 		l = FuncCall{
-			Name: op.Data,
-			Args: []Expr{l, r},
+			Name:         op.Data,
+			IsArithmetic: true,
+			Args:         []Expr{l, r},
 		}
 	}
 
@@ -147,8 +163,9 @@ func (p *Parser) mulExpr() Expr {
 
 		r := p.primaryExpr()
 		l = FuncCall{
-			Name: op.Data,
-			Args: []Expr{l, r},
+			Name:         op.Data,
+			IsArithmetic: true,
+			Args:         []Expr{l, r},
 		}
 	}
 
@@ -164,8 +181,9 @@ func (p *Parser) primaryExpr() Expr {
 	p.expectAny([]string{"-"})
 	n = p.consume()
 	return FuncCall{
-		Name: n.Data,
-		Args: []Expr{p.expr()},
+		Name:         n.Data,
+		IsArithmetic: true,
+		Args:         []Expr{p.expr()},
 	}
 }
 
@@ -363,16 +381,34 @@ func (p *Parser) funcDecl() FuncDecl {
 		returnType = rt.Data
 	}
 
-	p.expectAndConsume(LCURLY, "")
-
-	// body
-
-	p.expectAndConsume(RCURLY, "")
+	body := p.block()
 
 	return FuncDecl{
 		Name:       name,
 		ReturnType: returnType,
 		Params:     params,
+		Body:       body,
+	}
+}
+
+func (p *Parser) block() Block {
+	stmts := make([]Stmt, 0)
+	p.expectAndConsume(LCURLY, "")
+
+	for {
+		n := p.cur()
+		if n.Type == RCURLY {
+			break
+		}
+
+		stmt := p.stmt()
+		stmts = append(stmts, stmt)
+	}
+
+	p.expectAndConsume(RCURLY, "")
+
+	return Block{
+		Stmts: stmts,
 	}
 }
 

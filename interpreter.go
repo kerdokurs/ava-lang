@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"kerdo.dev/ava/ast"
 	"kerdo.dev/ava/types"
 	"log"
@@ -11,6 +12,10 @@ type Interp struct {
 
 	environment *Environment[any]
 	functions   map[string]types.FunctionDefinition
+}
+
+func (i *Interp) VisitExprStmt(stmt ast.ExprStmt) any {
+	return i.Visit(stmt.Expr)
 }
 
 func NewInterpretator(tree ast.ProgStmt) *Interp {
@@ -62,19 +67,21 @@ func (i *Interp) VisitFuncCall(call ast.FuncCall) any {
 	var r int
 	var ok bool
 
-	if len(call.Args) > 0 {
-		if l, ok = i.Visit(call.Args[0]).(int); !ok {
-			log.Fatalf("Functions can only be called with integer types.\n")
+	if call.IsArithmetic {
+		if len(call.Args) > 0 {
+			if l, ok = i.Visit(call.Args[0]).(int); !ok {
+				log.Fatalf("Functions can only be called with integer types.\n")
+			}
 		}
-	}
 
-	if len(call.Args) > 1 {
-		if r, ok = i.Visit(call.Args[1]).(int); !ok {
-			log.Fatalf("Functions can only be called with integer types.\n")
+		if len(call.Args) > 1 {
+			if r, ok = i.Visit(call.Args[1]).(int); !ok {
+				log.Fatalf("Functions can only be called with integer types.\n")
+			}
+		} else {
+			r = l
+			l = 0
 		}
-	} else {
-		r = l
-		l = 0
 	}
 
 	switch call.Name {
@@ -87,10 +94,18 @@ func (i *Interp) VisitFuncCall(call ast.FuncCall) any {
 	case "/":
 		return r / l
 	case "print":
-		return 0
+		exprs := Map(call.Args, func(expr ast.Expr) any {
+			stmt := ast.ExprStmt{
+				Expr: expr,
+			}
+			return i.VisitExprStmt(stmt)
+		})
+		fmt.Println(exprs)
+		return nil
 	default:
 		if fun, ok := i.functions[call.Name]; ok {
 			log.Printf("Running function %s\n", fun.Name)
+			return i.VisitBlock(fun.Body)
 		} else {
 			log.Fatalf("Function with name %s was not found\n", call.Name)
 		}
@@ -102,6 +117,7 @@ func (i *Interp) VisitFuncCall(call ast.FuncCall) any {
 func (i *Interp) VisitFuncDecl(decl ast.FuncDecl) any {
 	def := types.FunctionDefinition{
 		Name: decl.Name,
+		Body: decl.Body,
 	}
 	i.functions[decl.Name] = def
 	return nil
@@ -109,14 +125,14 @@ func (i *Interp) VisitFuncDecl(decl ast.FuncDecl) any {
 
 func (i *Interp) VisitConstDecl(decl ast.ConstDecl) any {
 	val := i.Visit(decl.Init)
-	i.environment.DeclareAssign(decl.Name, &val)
+	i.environment.DeclareAssign(decl.Name, val)
 
 	return val
 }
 
 func (i *Interp) VisitVarDecl(decl ast.VarDecl) any {
 	val := i.Visit(decl.Init)
-	i.environment.DeclareAssign(decl.Name, &val)
+	i.environment.DeclareAssign(decl.Name, val)
 	return val
 }
 
@@ -142,4 +158,13 @@ func (i *Interp) VisitNilLit(lit ast.NilLit) any {
 
 func (i *Interp) VisitStrLit(lit ast.StrLit) any {
 	return lit.Value
+}
+
+func (i *Interp) VisitBlock(block ast.Block) any {
+	i.environment.EnterBlock()
+	for _, stmt := range block.Stmts {
+		i.Visit(stmt)
+	}
+	i.environment.ExitBlock()
+	return nil
 }

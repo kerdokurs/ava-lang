@@ -8,6 +8,10 @@ type Interpreter interface {
 
 	VisitParenExpr(ParenExpr) any
 
+	VisitBlock(Block) any
+
+	VisitExprStmt(ExprStmt) any
+
 	VisitFuncCall(FuncCall) any
 
 	VisitFuncDecl(FuncDecl) any

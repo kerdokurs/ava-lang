@@ -9,6 +9,7 @@ type FuncDecl struct {
 	Name       string
 	ReturnType string
 	Params     []FuncParam
+	Body       Block
 }
 
 func (f FuncDecl) Accept(interp Interpreter) any {
@@ -34,7 +35,9 @@ func (f FuncDecl) String() string {
 	}
 	paramsStr := strings.Join(params, ",\n")
 
-	return fmt.Sprintf("FuncDecl(\n\t%s,\n\t%s,\n%s\n)", f.Name, retType, paramsStr)
+	bodyStr := f.Body.String()
+
+	return fmt.Sprintf("FuncDecl(\n\t%s,\n\t%s,\n%s\t%s\n)", f.Name, retType, paramsStr, bodyStr)
 }
 
 func (f FuncDecl) stmtNode() {}

@@ -6,8 +6,9 @@ import (
 )
 
 type FuncCall struct {
-	Name string
-	Args []Expr
+	Name         string
+	IsArithmetic bool
+	Args         []Expr
 }
 
 func (f FuncCall) Accept(interp Interpreter) any {

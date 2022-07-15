@@ -1,11 +1,11 @@
 package main
 
 type Environment[T any] struct {
-	envs []map[string]*T
+	envs []map[string]T
 }
 
 func NewEnvironment[T any]() *Environment[T] {
-	envs := make([]map[string]*T, 0)
+	envs := make([]map[string]T, 0)
 
 	env := &Environment[T]{
 		envs: envs,
@@ -16,7 +16,7 @@ func NewEnvironment[T any]() *Environment[T] {
 }
 
 func (e *Environment[T]) EnterBlock() {
-	e.envs = append(e.envs, make(map[string]*T))
+	e.envs = append(e.envs, make(map[string]T))
 }
 
 func (e *Environment[T]) ExitBlock() {
@@ -24,23 +24,24 @@ func (e *Environment[T]) ExitBlock() {
 }
 
 func (e *Environment[T]) Declare(variable string) {
-	e.DeclareAssign(variable, nil)
+	e.DeclareAssign(variable, *new(T))
 }
 
 func (e *Environment[T]) Assign(variable string, value T) {
 	env := e.findEnv(variable)
-	(*env)[variable] = &value
+	(*env)[variable] = value
 }
 
-func (e *Environment[T]) DeclareAssign(variable string, value *T) {
+func (e *Environment[T]) DeclareAssign(variable string, value T) {
 	e.envs[len(e.envs)-1][variable] = value
 }
 
-func (e *Environment[T]) Get(variable string) *T {
-	return e.envs[len(e.envs)-1][variable]
+func (e *Environment[T]) Get(variable string) T {
+	env := *e.findEnv(variable)
+	return env[variable]
 }
 
-func (e *Environment[T]) findEnv(variable string) *map[string]*T {
+func (e *Environment[T]) findEnv(variable string) *map[string]T {
 	k := len(e.envs) - 1
 	for k >= 0 {
 		if _, ok := e.envs[k][variable]; ok {
