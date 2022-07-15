@@ -1,0 +1,18 @@
+loc std::sample;
+
+const x: &u8 = 1;
+
+var y = 2.2;
+var z = true;
+var z = nil;
+var w = z;
+var i = "testing";
+var j = test(1, 2);
+var k = (1);
+var l = test((1), 2);
+
+fun main() -> void {
+}
+
+fun square(x: i8, y: i8) -> i16 {
+}

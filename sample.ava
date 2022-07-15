@@ -1,0 +1,37 @@
+loc std::sample;
+
+use std::io;
+use std::math;
+
+struct Vec2 {
+    x: i32,
+    y: i32,
+};
+
+impl Vec2 {
+    fun new(x: i32, y: i32) -> Vec2 {
+        Vec2 { x, y }
+    }
+
+    fun print(&self) -> void {
+        io::printf("%d, %d", self.x, self.y);
+    }
+
+    fun copy(&self) -> Vec2 {
+        new Vec2 { self.x, self.y }
+    }
+
+    fun len(&self) -> i32 {
+        math::sqrt(self.x*self.x + self.y*self.y)
+    }
+};
+
+fun main() {
+    // Nullable references can be nil
+    var copy: Vec2 = nil;
+    var vec = Vec2::new(0, 0);
+    copy = vec2.copy();
+    vec.print();
+    vec2.print();
+    io::printf("%d", 5+5*vec.len());
+}
