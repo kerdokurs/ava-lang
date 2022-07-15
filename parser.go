@@ -104,7 +104,71 @@ func (p *Parser) constDecl() ConstDecl {
 }
 
 func (p *Parser) expr() Expr {
-	return p.funcExpr()
+	return p.addExpr()
+}
+
+/// Additive
+///  : Multiplicative
+///  | Additive (+|-) Multiplicative
+func (p *Parser) addExpr() Expr {
+	l := p.mulExpr()
+
+	for {
+		n := p.cur()
+		if !(n.Type == OPERATOR && (n.Data == "+" || n.Data == "-")) {
+			break
+		}
+
+		op := p.consume()
+
+		r := p.mulExpr()
+		l = BinaryExpr{
+			X:        l,
+			Operator: op.Data,
+			Y:        r,
+		}
+	}
+
+	return l
+}
+
+/// Multiplicative
+///  : Literal
+///  | Multiplicative (*|/) Literal
+func (p *Parser) mulExpr() Expr {
+	l := p.primaryExpr()
+
+	for {
+		n := p.cur()
+		if !(n.Type == OPERATOR && (n.Data == "*" || n.Data == "/")) {
+			break
+		}
+
+		op := p.consume()
+
+		r := p.primaryExpr()
+		l = BinaryExpr{
+			X:        l,
+			Operator: op.Data,
+			Y:        r,
+		}
+	}
+
+	return l
+}
+
+func (p *Parser) primaryExpr() Expr {
+	n := p.cur()
+	if n.Type != OPERATOR {
+		return p.funcExpr()
+	}
+
+	p.expectAny([]string{"-"})
+	n = p.consume()
+	return UnaryExpr{
+		Operator: n.Data,
+		Expr:     p.expr(),
+	}
 }
 
 func (p *Parser) funcExpr() Expr {
@@ -133,7 +197,7 @@ func (p *Parser) funcExpr() Expr {
 	panic("WHAT THE SHIT")
 }
 
-func (p *Parser) parenExpr(t Token) ParenExpr {
+func (p *Parser) parenExpr(_ Token) ParenExpr {
 	e := p.expr()
 
 	p.expectAndConsume(RPAREN, "")
