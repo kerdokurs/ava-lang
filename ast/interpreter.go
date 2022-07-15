@@ -1,6 +1,6 @@
 package ast
 
-type Interpreter interface {
+type Visitor interface {
 	Visit(Node) any
 
 	VisitProgStmt(ProgStmt) any

@@ -3,7 +3,7 @@ package ast
 type NilLit struct {
 }
 
-func (n NilLit) Accept(interp Interpreter) any {
+func (n NilLit) Accept(interp Visitor) any {
 	return interp.VisitNilLit(n)
 }
 

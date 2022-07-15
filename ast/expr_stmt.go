@@ -10,7 +10,7 @@ func (e ExprStmt) String() string {
 	return fmt.Sprintf("ExprStmt(%s)", e.Expr.String())
 }
 
-func (e ExprStmt) Accept(interp Interpreter) any {
+func (e ExprStmt) Accept(interp Visitor) any {
 	return interp.VisitExprStmt(e)
 }
 

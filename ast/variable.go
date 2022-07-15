@@ -6,7 +6,7 @@ type Variable struct {
 	Name string
 }
 
-func (v Variable) Accept(interp Interpreter) any {
+func (v Variable) Accept(interp Visitor) any {
 	return interp.VisitVariable(v)
 }
 

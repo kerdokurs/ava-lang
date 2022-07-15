@@ -6,7 +6,7 @@ type BoolLit struct {
 	Value bool
 }
 
-func (b BoolLit) Accept(interp Interpreter) any {
+func (b BoolLit) Accept(interp Visitor) any {
 	return interp.VisitBoolLit(b)
 }
 

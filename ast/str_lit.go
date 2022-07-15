@@ -6,7 +6,7 @@ type StrLit struct {
 	Value string
 }
 
-func (s StrLit) Accept(interp Interpreter) any {
+func (s StrLit) Accept(interp Visitor) any {
 	return interp.VisitStrLit(s)
 }
 

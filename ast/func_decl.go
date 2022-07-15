@@ -12,7 +12,7 @@ type FuncDecl struct {
 	Body       Block
 }
 
-func (f FuncDecl) Accept(interp Interpreter) any {
+func (f FuncDecl) Accept(interp Visitor) any {
 	return interp.VisitFuncDecl(f)
 }
 

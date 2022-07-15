@@ -11,7 +11,7 @@ type FuncCall struct {
 	Args         []Expr
 }
 
-func (f FuncCall) Accept(interp Interpreter) any {
+func (f FuncCall) Accept(interp Visitor) any {
 	return interp.VisitFuncCall(f)
 }
 

@@ -6,7 +6,7 @@ type LocStmt struct {
 	Value string
 }
 
-func (l LocStmt) Accept(interp Interpreter) any {
+func (l LocStmt) Accept(interp Visitor) any {
 	return interp.VisitLocStmt(l)
 }
 

@@ -6,7 +6,7 @@ type FloatLit struct {
 	Value float64
 }
 
-func (f FloatLit) Accept(interp Interpreter) any {
+func (f FloatLit) Accept(interp Visitor) any {
 	return interp.VisitFloatLit(f)
 }
 

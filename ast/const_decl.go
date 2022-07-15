@@ -8,7 +8,7 @@ type ConstDecl struct {
 	Init Expr
 }
 
-func (c ConstDecl) Accept(interp Interpreter) any {
+func (c ConstDecl) Accept(interp Visitor) any {
 	return interp.VisitConstDecl(c)
 }
 

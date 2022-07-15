@@ -6,7 +6,7 @@ type ParenExpr struct {
 	Expr Expr
 }
 
-func (p ParenExpr) Accept(interp Interpreter) any {
+func (p ParenExpr) Accept(interp Visitor) any {
 	return interp.VisitParenExpr(p)
 }
 

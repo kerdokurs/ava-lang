@@ -10,7 +10,7 @@ type ProgStmt struct {
 	Glbls []GlblStmt
 }
 
-func (p ProgStmt) Accept(interp Interpreter) any {
+func (p ProgStmt) Accept(interp Visitor) any {
 	return interp.VisitProgStmt(p)
 }
 

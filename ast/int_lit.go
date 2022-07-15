@@ -6,7 +6,7 @@ type IntLit struct {
 	Value int
 }
 
-func (i IntLit) Accept(interp Interpreter) any {
+func (i IntLit) Accept(interp Visitor) any {
 	return interp.VisitIntLit(i)
 }
 

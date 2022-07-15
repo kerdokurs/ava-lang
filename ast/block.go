@@ -21,7 +21,7 @@ func (b Block) String() string {
 	return fmt.Sprintf("Block(%s)", str)
 }
 
-func (b Block) Accept(interp Interpreter) any {
+func (b Block) Accept(interp Visitor) any {
 	return interp.VisitBlock(b)
 }
 

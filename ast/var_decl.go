@@ -8,7 +8,7 @@ type VarDecl struct {
 	Init Expr
 }
 
-func (v VarDecl) Accept(interp Interpreter) any {
+func (v VarDecl) Accept(interp Visitor) any {
 	return interp.VisitVarDecl(v)
 }
 
