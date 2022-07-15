@@ -2,6 +2,7 @@ package ast
 
 type Node interface {
 	String() string
+	Accept(interp Interpreter) any
 }
 
 type Expr interface {

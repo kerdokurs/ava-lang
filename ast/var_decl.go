@@ -8,6 +8,10 @@ type VarDecl struct {
 	Init Expr
 }
 
+func (v VarDecl) Accept(interp Interpreter) any {
+	return interp.VisitVarDecl(v)
+}
+
 func (v VarDecl) String() string {
 	typ := v.Type
 	if len(typ) == 0 {

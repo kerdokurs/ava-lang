@@ -10,6 +10,10 @@ type ProgStmt struct {
 	Glbls []GlblStmt
 }
 
+func (p ProgStmt) Accept(interp Interpreter) any {
+	return interp.VisitProgStmt(p)
+}
+
 func (p ProgStmt) String() string {
 	sb := strings.Builder{}
 

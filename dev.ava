@@ -7,18 +7,11 @@ var z = true;
 var z = nil;
 var w = z;
 var i = "testing";
-var j = test(1, 2);
 var k = (1);
-var l = test((1), 2);
 var m = -1;
 var a = 1 + 1;
 var c = 1 + 2 - 1;
-var d = 1 + square(1, 2);
 var e = (1 + 1) * 2;
-var f = (1 + 1) * square(1, 2) + 2;
 
 fun main() -> void {
-}
-
-fun square(x: i8, y: i8) -> i16 {
 }

@@ -19,7 +19,7 @@ func NewParser(tokens []Token) *Parser {
 	}
 }
 
-func (p *Parser) Parse() Node {
+func (p *Parser) Parse() ProgStmt {
 	loc := p.locStmt()
 
 	glblStmts := make([]GlblStmt, 0)
@@ -122,10 +122,9 @@ func (p *Parser) addExpr() Expr {
 		op := p.consume()
 
 		r := p.mulExpr()
-		l = BinaryExpr{
-			X:        l,
-			Operator: op.Data,
-			Y:        r,
+		l = FuncCall{
+			Name: op.Data,
+			Args: []Expr{l, r},
 		}
 	}
 
@@ -147,10 +146,9 @@ func (p *Parser) mulExpr() Expr {
 		op := p.consume()
 
 		r := p.primaryExpr()
-		l = BinaryExpr{
-			X:        l,
-			Operator: op.Data,
-			Y:        r,
+		l = FuncCall{
+			Name: op.Data,
+			Args: []Expr{l, r},
 		}
 	}
 
@@ -165,9 +163,9 @@ func (p *Parser) primaryExpr() Expr {
 
 	p.expectAny([]string{"-"})
 	n = p.consume()
-	return UnaryExpr{
-		Operator: n.Data,
-		Expr:     p.expr(),
+	return FuncCall{
+		Name: n.Data,
+		Args: []Expr{p.expr()},
 	}
 }
 

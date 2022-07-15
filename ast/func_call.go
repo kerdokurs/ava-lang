@@ -10,6 +10,10 @@ type FuncCall struct {
 	Args []Expr
 }
 
+func (f FuncCall) Accept(interp Interpreter) any {
+	return interp.VisitFuncCall(f)
+}
+
 func (f FuncCall) String() string {
 	strs := make([]string, len(f.Args))
 	for i, arg := range f.Args {

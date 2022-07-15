@@ -8,6 +8,10 @@ type ConstDecl struct {
 	Init Expr
 }
 
+func (c ConstDecl) Accept(interp Interpreter) any {
+	return interp.VisitConstDecl(c)
+}
+
 func (c ConstDecl) String() string {
 	typ := c.Type
 	if len(typ) == 0 {

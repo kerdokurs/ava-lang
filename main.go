@@ -24,4 +24,7 @@ func main() {
 	parser := NewParser(tokens)
 	node := parser.Parse()
 	fmt.Printf("%s\n", node.String())
+
+	interp := NewInterpretator(node)
+	interp.Run()
 }

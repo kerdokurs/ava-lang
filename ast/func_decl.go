@@ -11,6 +11,10 @@ type FuncDecl struct {
 	Params     []FuncParam
 }
 
+func (f FuncDecl) Accept(interp Interpreter) any {
+	return interp.VisitFuncDecl(f)
+}
+
 type FuncParam struct {
 	Name string
 	Type string
