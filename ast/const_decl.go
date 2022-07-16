@@ -3,9 +3,10 @@ package ast
 import "fmt"
 
 type ConstDecl struct {
-	Name string
-	Type string
-	Init Expr
+	Name     string
+	Type     string
+	Init     Expr
+	IsGlobal bool
 }
 
 func (c ConstDecl) Accept(interp Visitor) any {

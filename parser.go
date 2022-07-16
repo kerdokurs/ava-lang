@@ -11,11 +11,15 @@ import (
 type Parser struct {
 	tokens []Token
 	i      int
+
+	globalSpace bool
 }
 
 func NewParser(tokens []Token) *Parser {
 	return &Parser{
-		tokens: tokens, i: 0,
+		tokens:      tokens,
+		i:           0,
+		globalSpace: true,
 	}
 }
 
@@ -112,9 +116,10 @@ func (p *Parser) constDecl() ConstDecl {
 	p.expectAndConsume(SEMI, "")
 
 	return ConstDecl{
-		Name: name,
-		Type: typ,
-		Init: init,
+		Name:     name,
+		Type:     typ,
+		Init:     init,
+		IsGlobal: p.globalSpace,
 	}
 }
 
@@ -381,7 +386,9 @@ func (p *Parser) funcDecl() FuncDecl {
 		returnType = rt.Data
 	}
 
+	p.globalSpace = true
 	body := p.block()
+	p.globalSpace = false
 
 	return FuncDecl{
 		Name:       name,

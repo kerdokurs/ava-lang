@@ -14,5 +14,5 @@ var c = 1 + 2 - 1;
 var e = (1 + 1) * 2;
 
 fun main() -> void {
-    print(a);
+    Print(a);
 }

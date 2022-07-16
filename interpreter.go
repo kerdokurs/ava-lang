@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"kerdo.dev/ava/ast"
 	"kerdo.dev/ava/types"
 	"log"
+	"os"
+	"reflect"
 )
 
 type Interp struct {
@@ -18,7 +21,9 @@ func (i *Interp) VisitExprStmt(stmt ast.ExprStmt) any {
 	return i.Visit(stmt.Expr)
 }
 
-func NewInterpretator(tree ast.ProgStmt) *Interp {
+func NewInterpretator(source io.Reader) *Interp {
+	tree := CreateAst(source)
+
 	return &Interp{
 		tree:        tree,
 		environment: NewEnvironment[any](),
@@ -38,7 +43,8 @@ func (i *Interp) Run() {
 		return
 	}
 
-	log.Fatalf("Main function must be defined.")
+	fmt.Println("Source code does not contain main function.")
+	os.Exit(1)
 }
 
 func (i *Interp) Visit(node ast.Node) any {
@@ -54,8 +60,7 @@ func (i *Interp) VisitProgStmt(stmt ast.ProgStmt) any {
 }
 
 func (i *Interp) VisitLocStmt(stmt ast.LocStmt) any {
-	//TODO implement me
-	panic("implement me")
+	panic("Location statements are not yet supported")
 }
 
 func (i *Interp) VisitParenExpr(expr ast.ParenExpr) any {
@@ -104,14 +109,51 @@ func (i *Interp) VisitFuncCall(call ast.FuncCall) any {
 		return nil
 	default:
 		if fun, ok := i.functions[call.Name]; ok {
-			log.Printf("Running function %s\n", fun.Name)
 			return i.VisitBlock(fun.Body)
 		} else {
-			log.Fatalf("Function with name %s was not found\n", call.Name)
+			return i.findAndRunBuiltInFunction(call)
 		}
 	}
 
 	return nil
+}
+
+func (i *Interp) findAndRunBuiltInFunction(call ast.FuncCall) any {
+	builtins := reflect.ValueOf(AvaBuiltins{})
+	m := builtins.MethodByName(call.Name)
+
+	if !m.IsValid() {
+		fmt.Printf("Undefined function %s\n", call.Name)
+		os.Exit(1)
+	}
+
+	args := Map(call.Args, func(arg ast.Expr) any {
+		return i.Visit(arg)
+	})
+	//argTypes := Map(args, func(arg any) reflect.Type {
+	//	return reflect.TypeOf(arg)
+	//})
+
+	if len(args) != m.Type().NumIn() {
+		fmt.Printf("Function %s expects %d arguments, but received %d.\n", call.Name, len(args), m.Type().NumIn())
+		os.Exit(1)
+	}
+
+	//var x interface{}
+	//interfaceType := reflect.TypeOf(x)
+	//for i, argType := range argTypes {
+	//	if m.Type().In(i) != interfaceType && m.Type().In(i) != argType {
+	//		fmt.Printf("Function %s expected argument %d to be of type %v, but got %v\n", call.Name, i+1, m.Type().String(), argType.String())
+	//		os.Exit(1)
+	//	}
+	//}
+
+	argValues := Map(args, func(arg any) reflect.Value {
+		return reflect.ValueOf(arg)
+	})
+
+	result := m.Call(argValues)
+	return result
 }
 
 func (i *Interp) VisitFuncDecl(decl ast.FuncDecl) any {
