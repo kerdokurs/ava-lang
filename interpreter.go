@@ -109,13 +109,33 @@ func (i *Interp) VisitFuncCall(call ast.FuncCall) any {
 		return nil
 	default:
 		if fun, ok := i.functions[call.Name]; ok {
-			return i.VisitBlock(fun.Body)
+			return i.findAndRunDefinedFunction(call, fun)
 		} else {
 			return i.findAndRunBuiltInFunction(call)
 		}
 	}
 
 	return nil
+}
+
+func (i *Interp) findAndRunDefinedFunction(call ast.FuncCall, def types.FunctionDefinition) any {
+	if len(call.Args) != len(def.Params) {
+		fmt.Printf("Function %s expects %d arguments, but got %d\n", def.Name, len(def.Params), len(call.Args))
+		os.Exit(1)
+	}
+
+	i.environment.EnterBlock()
+
+	for k, param := range def.Params {
+		arg := i.Visit(call.Args[k])
+		i.environment.DeclareAssign(param.Name, arg)
+	}
+
+	returnValue := i.Visit(def.Body)
+
+	i.environment.ExitBlock()
+
+	return returnValue
 }
 
 func (i *Interp) findAndRunBuiltInFunction(call ast.FuncCall) any {
@@ -158,8 +178,9 @@ func (i *Interp) findAndRunBuiltInFunction(call ast.FuncCall) any {
 
 func (i *Interp) VisitFuncDecl(decl ast.FuncDecl) any {
 	def := types.FunctionDefinition{
-		Name: decl.Name,
-		Body: decl.Body,
+		Name:   decl.Name,
+		Params: decl.Params,
+		Body:   decl.Body,
 	}
 	i.functions[decl.Name] = def
 	return nil

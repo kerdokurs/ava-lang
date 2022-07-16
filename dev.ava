@@ -13,6 +13,11 @@ var a = 1 + 1;
 var c = 1 + 2 - 1;
 var e = (1 + 1) * 2;
 
+fun test(a: u8) -> void {
+    Print(a);
+}
+
 fun main() -> void {
+    test(10);
     Print(a);
 }

@@ -23,10 +23,6 @@ func (e *Environment[T]) ExitBlock() {
 	e.envs = e.envs[:len(e.envs)-1]
 }
 
-func (e *Environment[T]) Declare(variable string) {
-	e.DeclareAssign(variable, *new(T))
-}
-
 func (e *Environment[T]) Assign(variable string, value T) {
 	env := e.findEnv(variable)
 	(*env)[variable] = value
