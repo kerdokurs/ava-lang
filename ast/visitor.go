@@ -10,6 +10,10 @@ type Visitor interface {
 
 	VisitBlock(Block) any
 
+	VisitIfStmt(IfStmt) any
+
+	VisitAssignStmt(AssignStmt) any
+
 	VisitExprStmt(ExprStmt) any
 
 	VisitFuncCall(FuncCall) any

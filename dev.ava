@@ -12,12 +12,22 @@ var m = -1;
 var a = 1 + 1;
 var c = 1 + 2 - 1;
 var e = (1 + 1) * 2;
+const ab = a;
 
 fun test(a: u8) -> void {
-    Print(a);
+    if a == 0 {
+        Print(a+1);
+    } else {
+        Print(a);
+        a = 5;
+        Print(a);
+    }
 }
 
 fun main() -> void {
     test(10);
+    test(0);
     Print(a);
+    ab = 50;
+    Print(ab);
 }

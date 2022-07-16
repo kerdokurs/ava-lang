@@ -105,6 +105,16 @@ func (c *Compiler) VisitBlock(block ast.Block) any {
 	panic("implement me")
 }
 
+func (c *Compiler) VisitIfStmt(stmt ast.IfStmt) any {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Compiler) VisitAssignStmt(stmt ast.AssignStmt) any {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *Compiler) VisitExprStmt(stmt ast.ExprStmt) any {
 	//TODO implement me
 	panic("implement me")

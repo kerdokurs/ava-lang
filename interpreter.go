@@ -13,7 +13,7 @@ import (
 type Interp struct {
 	tree ast.ProgStmt
 
-	environment *Environment[any]
+	environment *Environment[types.AvaVar]
 	functions   map[string]types.FunctionDefinition
 }
 
@@ -24,9 +24,11 @@ func (i *Interp) VisitExprStmt(stmt ast.ExprStmt) any {
 func NewInterpretator(source io.Reader) *Interp {
 	tree := CreateAst(source)
 
+	fmt.Println(tree.String())
+
 	return &Interp{
 		tree:        tree,
-		environment: NewEnvironment[any](),
+		environment: NewEnvironment[types.AvaVar](),
 		functions:   make(map[string]types.FunctionDefinition),
 	}
 }
@@ -87,6 +89,20 @@ func (i *Interp) VisitFuncCall(call ast.FuncCall) any {
 			r = l
 			l = 0
 		}
+	} else if call.IsComparison {
+		if len(call.Args) != 2 {
+			fmt.Println("Comparisons take 2 arguments. (Possible parser bug)")
+			os.Exit(1)
+		}
+
+		switch call.Name {
+		case "==":
+			a := i.Visit(call.Args[0])
+			b := i.Visit(call.Args[1])
+			return a == b
+		default:
+			fmt.Printf("Comparison %s is not supported yet.", call.Name)
+		}
 	}
 
 	switch call.Name {
@@ -97,7 +113,7 @@ func (i *Interp) VisitFuncCall(call ast.FuncCall) any {
 	case "*":
 		return l * r
 	case "/":
-		return r / l
+		return l / r
 	case "print":
 		exprs := Map(call.Args, func(expr ast.Expr) any {
 			stmt := ast.ExprStmt{
@@ -128,7 +144,10 @@ func (i *Interp) findAndRunDefinedFunction(call ast.FuncCall, def types.Function
 
 	for k, param := range def.Params {
 		arg := i.Visit(call.Args[k])
-		i.environment.DeclareAssign(param.Name, arg)
+		v := types.AvaVar{
+			Value: arg,
+		}
+		i.environment.DeclareAssign(param.Name, v)
 	}
 
 	returnValue := i.Visit(def.Body)
@@ -186,21 +205,67 @@ func (i *Interp) VisitFuncDecl(decl ast.FuncDecl) any {
 	return nil
 }
 
+func (i *Interp) inferType(val any) (typ types.AvaType) {
+	typeName := reflect.TypeOf(val).String()
+
+	if contains(intrinsicTypes, typeName) {
+		typ = types.Intrinsic
+	} else {
+		typ = types.Declared
+	}
+
+	return
+}
+
 func (i *Interp) VisitConstDecl(decl ast.ConstDecl) any {
 	val := i.Visit(decl.Init)
-	i.environment.DeclareAssign(decl.Name, val)
+
+	typeName := decl.Name
+	typ := types.Declared
+	isRef := false // idk calc later
+	if typeName == "" {
+		typ = i.inferType(decl)
+	} else if typeName[0] == '&' {
+		isRef = true
+	}
+
+	v := types.AvaVar{
+		Type:    typ,
+		Value:   val,
+		IsConst: true,
+		IsRef:   isRef,
+	}
+
+	i.environment.DeclareAssign(decl.Name, v)
 
 	return val
 }
 
 func (i *Interp) VisitVarDecl(decl ast.VarDecl) any {
 	val := i.Visit(decl.Init)
-	i.environment.DeclareAssign(decl.Name, val)
+
+	typeName := decl.Name
+	typ := types.Declared
+	isRef := false // idk calc later
+	if typeName == "" {
+		typ = i.inferType(decl)
+	} else if typeName[0] == '&' {
+		isRef = true
+	}
+
+	v := types.AvaVar{
+		Type:    typ,
+		Value:   val,
+		IsConst: false,
+		IsRef:   isRef,
+	}
+
+	i.environment.DeclareAssign(decl.Name, v)
 	return val
 }
 
 func (i *Interp) VisitVariable(variable ast.Variable) any {
-	return i.environment.Get(variable.Name)
+	return i.environment.Get(variable.Name).Value
 }
 
 func (i *Interp) VisitIntLit(lit ast.IntLit) any {
@@ -230,4 +295,39 @@ func (i *Interp) VisitBlock(block ast.Block) any {
 	}
 	i.environment.ExitBlock()
 	return nil
+}
+
+func (i *Interp) VisitIfStmt(stmt ast.IfStmt) any {
+	cond := i.Visit(stmt.Condition)
+	ok := false
+
+	switch cond.(type) {
+	case bool:
+		ok = cond.(bool)
+	}
+
+	if ok {
+		return i.Visit(stmt.ThenBody)
+	}
+
+	if stmt.HasElse {
+		return i.Visit(stmt.ElseBody)
+	}
+
+	return nil
+}
+
+func (i *Interp) VisitAssignStmt(stmt ast.AssignStmt) any {
+	// TODO: If not found??
+
+	variable := i.environment.Get(stmt.Variable)
+	if variable.IsConst {
+		fmt.Printf("Assignment to constant variable %s\n", stmt.Variable)
+		os.Exit(1)
+	}
+
+	val := i.Visit(stmt.Value)
+	variable.Value = val
+	i.environment.Assign(stmt.Variable, variable)
+	return val
 }

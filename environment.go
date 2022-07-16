@@ -1,5 +1,10 @@
 package main
 
+import (
+	"fmt"
+	"os"
+)
+
 type Environment[T any] struct {
 	envs []map[string]T
 }
@@ -33,8 +38,12 @@ func (e *Environment[T]) DeclareAssign(variable string, value T) {
 }
 
 func (e *Environment[T]) Get(variable string) T {
-	env := *e.findEnv(variable)
-	return env[variable]
+	env := e.findEnv(variable)
+	if env == nil {
+		fmt.Printf("Undefined variable: %s\n", variable)
+		os.Exit(1)
+	}
+	return (*env)[variable]
 }
 
 func (e *Environment[T]) findEnv(variable string) *map[string]T {

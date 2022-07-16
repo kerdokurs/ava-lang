@@ -67,12 +67,60 @@ func (p *Parser) stmt() Stmt {
 	if t.Data == "var" {
 		p.consume()
 		return p.varDecl()
+	} else if t.Data == "if" {
+		p.consume()
+		return p.ifStmt()
+	} else if t.Type == IDENT {
+		return p.assignmentOrExpr()
 	}
 
 	expr := p.expr()
 	p.expectAndConsume(SEMI, "")
 	return ExprStmt{
 		Expr: expr,
+	}
+}
+
+func (p *Parser) assignmentOrExpr() Stmt {
+	next := p.next()
+
+	if !(next.Type == OPERATOR && next.Data == "=") {
+		expr := p.expr()
+		p.expectAndConsume(SEMI, "")
+		return ExprStmt{
+			Expr: expr,
+		}
+	}
+
+	// Assignment
+	variable := p.consume()
+	p.consume() // =
+	expr := p.expr()
+	p.expectAndConsume(SEMI, "")
+
+	return AssignStmt{
+		Variable: variable.Data,
+		Value:    expr,
+	}
+}
+
+func (p *Parser) ifStmt() Stmt {
+	cond := p.compExpr()
+	thenBlock := p.block()
+	elseBlock := Block{}
+	hasElse := false
+
+	if p.cur().Data == "else" {
+		hasElse = true
+		p.consume()
+		elseBlock = p.block()
+	}
+
+	return IfStmt{
+		Condition: cond,
+		ThenBody:  thenBlock,
+		HasElse:   hasElse,
+		ElseBody:  elseBlock,
 	}
 }
 
@@ -125,6 +173,29 @@ func (p *Parser) constDecl() ConstDecl {
 
 func (p *Parser) expr() Expr {
 	return p.addExpr()
+}
+
+var compOps = []string{
+	"<", ">", "<=", ">=", "==", "!=",
+	"&", "&&", "|", "||",
+}
+
+func (p *Parser) compExpr() Expr {
+	l := p.addExpr()
+
+	if p.cur().Type != OPERATOR {
+		return l
+	}
+
+	p.expectAny(compOps)
+	op := p.consume()
+	r := p.addExpr()
+
+	return FuncCall{
+		Name:         op.Data,
+		IsComparison: true,
+		Args:         []Expr{l, r},
+	}
 }
 
 /// Additive

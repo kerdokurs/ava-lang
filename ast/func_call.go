@@ -8,6 +8,7 @@ import (
 type FuncCall struct {
 	Name         string
 	IsArithmetic bool
+	IsComparison bool
 	Args         []Expr
 }
 
