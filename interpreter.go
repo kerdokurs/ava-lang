@@ -22,7 +22,9 @@ func (i *Interp) VisitExprStmt(stmt ExprStmt) AvaVal {
 func NewInterpretator(source io.Reader) *Interp {
 	tree := CreateAst(source)
 
-	fmt.Println(tree.String())
+	if IsDebug {
+		fmt.Println(tree.String())
+	}
 
 	return &Interp{
 		tree:        tree,
@@ -178,85 +180,6 @@ func (i *Interp) VisitFuncCall(call FuncCall) AvaVal {
 	}
 
 	return i.findAndRunBuiltInFunction(call)
-	//var l int
-	//var r int
-	//var ok bool
-	//
-	//if call.IsArithmetic {
-	//	if len(call.Args) > 0 {
-	//		if l, ok = i.Visit(call.Args[0]).(int); !ok {
-	//			log.Fatalf("Functions can only be called with integer types.\n")
-	//		}
-	//	}
-	//
-	//	if len(call.Args) > 1 {
-	//		if r, ok = i.Visit(call.Args[1]).(int); !ok {
-	//			log.Fatalf("Functions can only be called with integer types.\n")
-	//		}
-	//	} else {
-	//		r = l
-	//		l = 0
-	//	}
-	//} else if call.IsComparison {
-	//	if len(call.Args) != 2 {
-	//		fmt.Println("Comparisons take 2 arguments. (Possible parser bug)")
-	//		os.Exit(1)
-	//	}
-	//
-	//	switch call.Name {
-	//	case "==":
-	//		a := i.Visit(call.Args[0])
-	//		b := i.Visit(call.Args[1])
-	//		return a == b
-	//	case "<":
-	//		a := i.Visit(call.Args[0])
-	//		b := i.Visit(call.Args[1])
-	//		aInt := 0
-	//		bInt := 0
-	//
-	//		if aInt, ok = a.(int); !ok {
-	//			fmt.Printf("< comparison is only supported with integer types.")
-	//			os.Exit(1)
-	//		}
-	//
-	//		if bInt, ok = b.(int); !ok {
-	//			fmt.Printf("< comparison is only supported with integer types.")
-	//			os.Exit(1)
-	//		}
-	//
-	//		return aInt < bInt
-	//	default:
-	//		fmt.Printf("Comparison %s is not supported yet.", call.Name)
-	//	}
-	//}
-	//
-	//switch call.Name {
-	//case "+":
-	//	return l + r
-	//case "-":
-	//	return l - r
-	//case "*":
-	//	return l * r
-	//case "/":
-	//	return l / r
-	//case "print":
-	//	exprs := Map(call.Args, func(expr Expr) AvaVal {
-	//		stmt := ExprStmt{
-	//			Expr: expr,
-	//		}
-	//		return i.VisitExprStmt(stmt)
-	//	})
-	//	fmt.Println(exprs)
-	//	return nil
-	//default:
-	//	if fun, ok := i.functions[call.Name]; ok {
-	//		return i.findAndRunDefinedFunction(call, fun)
-	//	} else {
-	//		return i.findAndRunBuiltInFunction(call)
-	//	}
-	//}
-	//
-	//return nil
 }
 
 func (i *Interp) findAndRunDefinedFunction(call FuncCall, def FunctionDefinition) AvaVal {
@@ -317,9 +240,26 @@ func (i *Interp) findAndRunBuiltInFunction(call FuncCall) AvaVal {
 		return reflect.ValueOf(arg.Value)
 	})
 
-	result := m.Call(argValues)
+	returnType := Void
+	if m.Type().NumOut() > 0 {
+		t := m.Type().Out(0).String()
+		switch t {
+		case "int":
+			returnType = Int
+		case "string":
+			returnType = String
+		}
+	}
+
+	// TODO: Returning a reflect.Value could lead to a problem.
+	// It is not a pure type anymore. Deal with it later.
+	var result reflect.Value
+	results := m.Call(argValues)
+	if len(results) > 0 {
+		result = results[0]
+	}
 	return AvaVal{
-		Type:  Unknown,
+		Type:  returnType,
 		Value: result,
 	}
 }

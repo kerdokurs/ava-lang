@@ -8,6 +8,7 @@ import (
 )
 
 var IsVerbose bool
+var IsDebug bool
 
 func printHelp() {
 	fmt.Println(`Ava usage:
@@ -53,10 +54,12 @@ func runCompilation(fileName string, outPath *string) {
 func main() {
 	outPath := flag.String("out", "a.out", "Output file (only allowed with compile mode)")
 	verbose := flag.Bool("verbose", false, "Verbose")
+	debug := flag.Bool("debug", false, "Debug")
 
 	flag.Parse()
 
 	IsVerbose = *verbose
+	IsDebug = *debug
 
 	args := flag.Args()
 
