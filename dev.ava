@@ -1,22 +1,6 @@
 loc std::sample;
 
-const x: &u8 = 1;
-
-var y = 2.2;
-var z = true;
-var z = nil;
-var w = z;
-var i = "testing";
-var k = (1);
-var m = -1;
-var a = 1 + 1;
-var c = 1 + 2 - 1;
-var e = (1 + 1) * 2;
-const ab = a;
-
-struct Printer {
-    x: u8,
-};
+const a = 1;
 
 fun test(a: u8) -> void {
     if a == 0 {
@@ -29,6 +13,8 @@ fun test(a: u8) -> void {
 
     var n = 0;
     while n < 5 {
+        Print("n:");
+        Print(n);
         n = n + 1;
     }
 }

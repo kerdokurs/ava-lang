@@ -3,22 +3,19 @@ package main
 import (
 	"fmt"
 	"io"
-	"kerdo.dev/ava/ast"
-	"kerdo.dev/ava/types"
-	"log"
 	"os"
 	"reflect"
 )
 
 type Interp struct {
-	tree ast.ProgStmt
+	tree ProgStmt
 
-	environment *Environment[types.AvaVar]
-	functions   map[string]types.FunctionDefinition
-	structs     map[string]types.StructDefinition
+	environment *Environment[AvaVar]
+	functions   map[string]FunctionDefinition
+	structs     map[string]StructDefinition
 }
 
-func (i *Interp) VisitExprStmt(stmt ast.ExprStmt) any {
+func (i *Interp) VisitExprStmt(stmt ExprStmt) AvaVal {
 	return i.Visit(stmt.Expr)
 }
 
@@ -29,9 +26,9 @@ func NewInterpretator(source io.Reader) *Interp {
 
 	return &Interp{
 		tree:        tree,
-		environment: NewEnvironment[types.AvaVar](),
-		functions:   make(map[string]types.FunctionDefinition),
-		structs:     make(map[string]types.StructDefinition),
+		environment: NewEnvironment[AvaVar](),
+		functions:   make(map[string]FunctionDefinition),
+		structs:     make(map[string]StructDefinition),
 	}
 }
 
@@ -39,9 +36,9 @@ func (i *Interp) Run() {
 	i.VisitProgStmt(i.tree)
 
 	if _, ok := i.functions["main"]; ok {
-		funcCall := ast.FuncCall{
+		funcCall := FuncCall{
 			Name: "main",
-			Args: []ast.Expr{},
+			Args: []Expr{},
 		}
 		i.VisitFuncCall(funcCall)
 		return
@@ -51,109 +48,218 @@ func (i *Interp) Run() {
 	os.Exit(1)
 }
 
-func (i *Interp) Visit(node ast.Node) any {
+func (i *Interp) Visit(node Node) AvaVal {
 	return node.Accept(i)
 }
 
-func (i *Interp) VisitProgStmt(stmt ast.ProgStmt) any {
+func (i *Interp) VisitProgStmt(stmt ProgStmt) AvaVal {
 	for _, glbl := range stmt.Glbls {
 		i.Visit(glbl)
 	}
 
-	return 0
+	return AvaVal{}
 }
 
-func (i *Interp) VisitLocStmt(stmt ast.LocStmt) any {
+func (i *Interp) VisitLocStmt(stmt LocStmt) AvaVal {
 	panic("Location statements are not yet supported")
 }
 
-func (i *Interp) VisitParenExpr(expr ast.ParenExpr) any {
+func (i *Interp) VisitParenExpr(expr ParenExpr) AvaVal {
 	return i.Visit(expr.Expr)
 }
 
-func (i *Interp) VisitFuncCall(call ast.FuncCall) any {
-	var l int
-	var r int
-	var ok bool
+func (i *Interp) visitArithmeticCall(call FuncCall) AvaVal {
+	if len(call.Args) != 2 {
+		fmt.Printf("Arithmetic operation requires exactly 2 arguments, but got %d. (Possible parser bug)\n", len(call.Args))
+		os.Exit(1)
+	}
+	args := Map(call.Args, func(arg Expr) AvaVal {
+		return i.Visit(arg)
+	})
 
-	if call.IsArithmetic {
-		if len(call.Args) > 0 {
-			if l, ok = i.Visit(call.Args[0]).(int); !ok {
-				log.Fatalf("Functions can only be called with integer types.\n")
-			}
-		}
+	a := args[0]
+	b := args[1]
 
-		if len(call.Args) > 1 {
-			if r, ok = i.Visit(call.Args[1]).(int); !ok {
-				log.Fatalf("Functions can only be called with integer types.\n")
-			}
-		} else {
-			r = l
-			l = 0
-		}
-	} else if call.IsComparison {
-		if len(call.Args) != 2 {
-			fmt.Println("Comparisons take 2 arguments. (Possible parser bug)")
-			os.Exit(1)
-		}
-
-		switch call.Name {
-		case "==":
-			a := i.Visit(call.Args[0])
-			b := i.Visit(call.Args[1])
-			return a == b
-		case "<":
-			a := i.Visit(call.Args[0])
-			b := i.Visit(call.Args[1])
-			aInt := 0
-			bInt := 0
-
-			if aInt, ok = a.(int); !ok {
-				fmt.Printf("< comparison is only supported with integer types.")
-				os.Exit(1)
-			}
-
-			if bInt, ok = b.(int); !ok {
-				fmt.Printf("< comparison is only supported with integer types.")
-				os.Exit(1)
-			}
-
-			return aInt < bInt
-		default:
-			fmt.Printf("Comparison %s is not supported yet.", call.Name)
-		}
+	if a.Type != b.Type {
+		fmt.Printf("Arithmetic operation arguments must be same! Received types %d and %d\n", a.Type, b.Type)
+		os.Exit(1)
 	}
 
+	if a.Type != Int {
+		fmt.Printf("Custom type arithmetic operation is not implemented yet.")
+		os.Exit(1)
+	}
+
+	aInt, bInt := 0, 0
+	var ok bool
+	if aInt, ok = a.Value.(int); !ok {
+		fmt.Printf("Could not cast value to int in arithmetic operation %s\n", call.Name)
+		os.Exit(1)
+	}
+	if bInt, ok = b.Value.(int); !ok {
+		fmt.Printf("Could not cast value to int in arithmetic operation %s\n", call.Name)
+		os.Exit(1)
+	}
+
+	val := 0
 	switch call.Name {
 	case "+":
-		return l + r
-	case "-":
-		return l - r
-	case "*":
-		return l * r
-	case "/":
-		return l / r
-	case "print":
-		exprs := Map(call.Args, func(expr ast.Expr) any {
-			stmt := ast.ExprStmt{
-				Expr: expr,
-			}
-			return i.VisitExprStmt(stmt)
-		})
-		fmt.Println(exprs)
-		return nil
+		val = aInt + bInt
 	default:
-		if fun, ok := i.functions[call.Name]; ok {
-			return i.findAndRunDefinedFunction(call, fun)
-		} else {
-			return i.findAndRunBuiltInFunction(call)
-		}
+		fmt.Printf("Unsupported arithmetic operation: %s\n", call.Name)
+		os.Exit(1)
 	}
 
-	return nil
+	return AvaVal{
+		Type:  Int,
+		Value: val,
+	}
 }
 
-func (i *Interp) findAndRunDefinedFunction(call ast.FuncCall, def types.FunctionDefinition) any {
+func (i *Interp) visitComparisonCall(call FuncCall) AvaVal {
+	if len(call.Args) != 2 {
+		fmt.Printf("Comparison requires exactly 2 arguments, but got %d. (Possible parser bug)\n", len(call.Args))
+		os.Exit(1)
+	}
+	args := Map(call.Args, func(arg Expr) AvaVal {
+		return i.Visit(arg)
+	})
+
+	a := args[0]
+	b := args[1]
+
+	if a.Type != b.Type {
+		fmt.Printf("Comparison arguments must be same! Received types %d and %d\n", a.Type, b.Type)
+		os.Exit(1)
+	}
+
+	if a.Type != Int {
+		fmt.Printf("Custom type comparison is not implemented yet.")
+		os.Exit(1)
+	}
+
+	aInt, bInt := 0, 0
+	var ok bool
+	if aInt, ok = a.Value.(int); !ok {
+		fmt.Printf("Could not cast value to int in comparison %s\n", call.Name)
+		os.Exit(1)
+	}
+	if bInt, ok = b.Value.(int); !ok {
+		fmt.Printf("Could not cast value to int in comparison %s\n", call.Name)
+		os.Exit(1)
+	}
+
+	val := false
+	switch call.Name {
+	case "<":
+		val = aInt < bInt
+	case "==":
+		val = aInt == bInt
+	default:
+		fmt.Printf("Unsupported comparison operator: %s\n", call.Name)
+		os.Exit(1)
+	}
+
+	return AvaVal{
+		Type:  Bool,
+		Value: val,
+	}
+}
+
+func (i *Interp) VisitFuncCall(call FuncCall) AvaVal {
+	if call.IsArithmetic {
+		return i.visitArithmeticCall(call)
+	} else if call.IsComparison {
+		return i.visitComparisonCall(call)
+	}
+
+	if fun, ok := i.functions[call.Name]; ok {
+		return i.findAndRunDefinedFunction(call, fun)
+	}
+
+	return i.findAndRunBuiltInFunction(call)
+	//var l int
+	//var r int
+	//var ok bool
+	//
+	//if call.IsArithmetic {
+	//	if len(call.Args) > 0 {
+	//		if l, ok = i.Visit(call.Args[0]).(int); !ok {
+	//			log.Fatalf("Functions can only be called with integer types.\n")
+	//		}
+	//	}
+	//
+	//	if len(call.Args) > 1 {
+	//		if r, ok = i.Visit(call.Args[1]).(int); !ok {
+	//			log.Fatalf("Functions can only be called with integer types.\n")
+	//		}
+	//	} else {
+	//		r = l
+	//		l = 0
+	//	}
+	//} else if call.IsComparison {
+	//	if len(call.Args) != 2 {
+	//		fmt.Println("Comparisons take 2 arguments. (Possible parser bug)")
+	//		os.Exit(1)
+	//	}
+	//
+	//	switch call.Name {
+	//	case "==":
+	//		a := i.Visit(call.Args[0])
+	//		b := i.Visit(call.Args[1])
+	//		return a == b
+	//	case "<":
+	//		a := i.Visit(call.Args[0])
+	//		b := i.Visit(call.Args[1])
+	//		aInt := 0
+	//		bInt := 0
+	//
+	//		if aInt, ok = a.(int); !ok {
+	//			fmt.Printf("< comparison is only supported with integer types.")
+	//			os.Exit(1)
+	//		}
+	//
+	//		if bInt, ok = b.(int); !ok {
+	//			fmt.Printf("< comparison is only supported with integer types.")
+	//			os.Exit(1)
+	//		}
+	//
+	//		return aInt < bInt
+	//	default:
+	//		fmt.Printf("Comparison %s is not supported yet.", call.Name)
+	//	}
+	//}
+	//
+	//switch call.Name {
+	//case "+":
+	//	return l + r
+	//case "-":
+	//	return l - r
+	//case "*":
+	//	return l * r
+	//case "/":
+	//	return l / r
+	//case "print":
+	//	exprs := Map(call.Args, func(expr Expr) AvaVal {
+	//		stmt := ExprStmt{
+	//			Expr: expr,
+	//		}
+	//		return i.VisitExprStmt(stmt)
+	//	})
+	//	fmt.Println(exprs)
+	//	return nil
+	//default:
+	//	if fun, ok := i.functions[call.Name]; ok {
+	//		return i.findAndRunDefinedFunction(call, fun)
+	//	} else {
+	//		return i.findAndRunBuiltInFunction(call)
+	//	}
+	//}
+	//
+	//return nil
+}
+
+func (i *Interp) findAndRunDefinedFunction(call FuncCall, def FunctionDefinition) AvaVal {
 	if len(call.Args) != len(def.Params) {
 		fmt.Printf("Function %s expects %d arguments, but got %d\n", def.Name, len(def.Params), len(call.Args))
 		os.Exit(1)
@@ -163,7 +269,8 @@ func (i *Interp) findAndRunDefinedFunction(call ast.FuncCall, def types.Function
 
 	for k, param := range def.Params {
 		arg := i.Visit(call.Args[k])
-		v := types.AvaVar{
+		v := AvaVar{
+			Type:  arg.Type,
 			Value: arg,
 		}
 		i.environment.DeclareAssign(param.Name, v)
@@ -176,7 +283,7 @@ func (i *Interp) findAndRunDefinedFunction(call ast.FuncCall, def types.Function
 	return returnValue
 }
 
-func (i *Interp) findAndRunBuiltInFunction(call ast.FuncCall) any {
+func (i *Interp) findAndRunBuiltInFunction(call FuncCall) AvaVal {
 	builtins := reflect.ValueOf(AvaBuiltins{})
 	m := builtins.MethodByName(call.Name)
 
@@ -185,10 +292,10 @@ func (i *Interp) findAndRunBuiltInFunction(call ast.FuncCall) any {
 		os.Exit(1)
 	}
 
-	args := Map(call.Args, func(arg ast.Expr) any {
+	args := Map(call.Args, func(arg Expr) AvaVal {
 		return i.Visit(arg)
 	})
-	//argTypes := Map(args, func(arg any) reflect.Type {
+	//argTypes := Map(args, func(arg AvaVar) reflect.Type {
 	//	return reflect.TypeOf(arg)
 	//})
 
@@ -206,53 +313,61 @@ func (i *Interp) findAndRunBuiltInFunction(call ast.FuncCall) any {
 	//	}
 	//}
 
-	argValues := Map(args, func(arg any) reflect.Value {
-		return reflect.ValueOf(arg)
+	argValues := Map(args, func(arg AvaVal) reflect.Value {
+		return reflect.ValueOf(arg.Value)
 	})
 
 	result := m.Call(argValues)
-	return result
+	return AvaVal{
+		Type:  Unknown,
+		Value: result,
+	}
 }
 
-func (i *Interp) VisitFuncDecl(decl ast.FuncDecl) any {
-	def := types.FunctionDefinition{
+func (i *Interp) VisitFuncDecl(decl FuncDecl) AvaVal {
+	def := FunctionDefinition{
 		Name:   decl.Name,
 		Params: decl.Params,
 		Body:   decl.Body,
 	}
 	i.functions[decl.Name] = def
-	return nil
+	return AvaVal{
+		Type: Void,
+	}
 }
 
-func (i *Interp) inferType(val any) (typ types.AvaType) {
-	typeName := reflect.TypeOf(val).String()
+func (i *Interp) inferType(val AvaVal) (typ AvaType) {
+	typeName := reflect.TypeOf(val.Value).String()
 
-	if contains(intrinsicTypes, typeName) {
-		typ = types.Intrinsic
-	} else {
-		typ = types.Declared
+	switch typeName {
+	case "int":
+		typ = Int
 	}
 
 	return
 }
 
-func (i *Interp) VisitConstDecl(decl ast.ConstDecl) any {
+func (i *Interp) VisitConstDecl(decl ConstDecl) AvaVal {
 	val := i.Visit(decl.Init)
 
-	typeName := decl.Name
-	typ := types.Declared
-	isRef := false // idk calc later
-	if typeName == "" {
-		typ = i.inferType(decl)
-	} else if typeName[0] == '&' {
-		isRef = true
+	// TODO: This logic could cause issues
+	typeName := decl.Type
+	typ := val.Type
+	if typeName == "" && typ == Unknown {
+		typ = i.inferType(val)
+	}
+	// TODO: ref
+
+	if typ != val.Type {
+		fmt.Printf("Constant variable %s declared with type %s, but got expression with type %d\n", decl.Name, decl.Type, typ)
+		os.Exit(1)
 	}
 
-	v := types.AvaVar{
+	v := AvaVar{
 		Type:    typ,
 		Value:   val,
 		IsConst: true,
-		IsRef:   isRef,
+		//IsRef:   isRef,
 	}
 
 	i.environment.DeclareAssign(decl.Name, v)
@@ -260,69 +375,84 @@ func (i *Interp) VisitConstDecl(decl ast.ConstDecl) any {
 	return val
 }
 
-func (i *Interp) VisitVarDecl(decl ast.VarDecl) any {
+func (i *Interp) VisitVarDecl(decl VarDecl) AvaVal {
 	val := i.Visit(decl.Init)
 
-	typeName := decl.Name
-	typ := types.Declared
-	isRef := false // idk calc later
-	if typeName == "" {
-		typ = i.inferType(decl)
-	} else if typeName[0] == '&' {
-		isRef = true
+	// TODO: This logic could cause issues
+	typeName := decl.Type
+	typ := val.Type
+	if typeName == "" && typ == Unknown {
+		typ = i.inferType(val)
+	}
+	// TODO: ref
+
+	if typ != val.Type {
+		fmt.Printf("Variable %s declared with type %s, but got expression with type %d\n", decl.Name, decl.Type, typ)
+		os.Exit(1)
 	}
 
-	v := types.AvaVar{
+	v := AvaVar{
 		Type:    typ,
 		Value:   val,
 		IsConst: false,
-		IsRef:   isRef,
+		//IsRef:   isRef,
 	}
 
 	i.environment.DeclareAssign(decl.Name, v)
-	return val
+	return AvaVal{
+		Type: Void,
+	}
 }
 
-func (i *Interp) VisitVariable(variable ast.Variable) any {
-	return i.environment.Get(variable.Name).Value
+func (i *Interp) VisitVariable(variable Variable) AvaVal {
+	v := i.environment.Get(variable.Name)
+	return v.Value
 }
 
-func (i *Interp) VisitIntLit(lit ast.IntLit) any {
-	return lit.Value
+func (i *Interp) VisitIntLit(lit IntLit) AvaVal {
+	return AvaVal{
+		Type:  Int,
+		Value: lit.Value,
+	}
 }
 
-func (i *Interp) VisitFloatLit(lit ast.FloatLit) any {
-	return lit.Value
+func (i *Interp) VisitFloatLit(lit FloatLit) AvaVal {
+	return AvaVal{
+		Type:  Float,
+		Value: lit.Value,
+	}
 }
 
-func (i *Interp) VisitBoolLit(lit ast.BoolLit) any {
-	return lit.Value
+func (i *Interp) VisitBoolLit(lit BoolLit) AvaVal {
+	return AvaVal{
+		Type:  Bool,
+		Value: lit.Value,
+	}
 }
 
-func (i *Interp) VisitNilLit(lit ast.NilLit) any {
-	return nil
+func (i *Interp) VisitStrLit(lit StrLit) AvaVal {
+	return AvaVal{
+		Type:  String,
+		Value: lit.Value,
+	}
 }
 
-func (i *Interp) VisitStrLit(lit ast.StrLit) any {
-	return lit.Value
-}
-
-func (i *Interp) VisitBlock(block ast.Block) any {
+func (i *Interp) VisitBlock(block Block) AvaVal {
 	i.environment.EnterBlock()
 	for _, stmt := range block.Stmts {
 		i.Visit(stmt)
 	}
 	i.environment.ExitBlock()
-	return nil
+	return AvaVal{}
 }
 
-func (i *Interp) VisitIfStmt(stmt ast.IfStmt) any {
+func (i *Interp) VisitIfStmt(stmt IfStmt) AvaVal {
 	cond := i.Visit(stmt.Condition)
 	ok := false
 
-	switch cond.(type) {
-	case bool:
-		ok = cond.(bool)
+	switch cond.Type {
+	case Bool:
+		ok = cond.Value.(bool)
 	}
 
 	if ok {
@@ -333,19 +463,18 @@ func (i *Interp) VisitIfStmt(stmt ast.IfStmt) any {
 		return i.Visit(stmt.ElseBody)
 	}
 
-	return nil
+	return AvaVal{}
 }
 
-func (i *Interp) VisitWhileStmt(stmt ast.WhileStmt) any {
+func (i *Interp) VisitWhileStmt(stmt WhileStmt) AvaVal {
 	for {
 		cond := i.Visit(stmt.Condition)
 
-		var val bool
-		var ok bool
-		if val, ok = cond.(bool); !ok {
+		if cond.Type != Bool {
 			fmt.Printf("Condition must be bool")
 			os.Exit(1)
 		}
+		val := cond.Value.(bool)
 
 		if !val {
 			break
@@ -354,32 +483,50 @@ func (i *Interp) VisitWhileStmt(stmt ast.WhileStmt) any {
 		i.Visit(stmt.Body)
 	}
 
-	return nil
+	return AvaVal{}
 }
 
-func (i *Interp) VisitAssignStmt(stmt ast.AssignStmt) any {
+func (i *Interp) VisitAssignStmt(stmt AssignStmt) AvaVal {
 	// TODO: If not found??
 
 	variable := i.environment.Get(stmt.Variable)
+	if variable.Type == Zero {
+		fmt.Printf("Variable %s is not declared.\n", stmt.Variable)
+		os.Exit(1)
+	}
+
 	if variable.IsConst {
 		fmt.Printf("Assignment to constant variable %s\n", stmt.Variable)
 		os.Exit(1)
 	}
 
 	val := i.Visit(stmt.Value)
+
+	if variable.Type != val.Type {
+		fmt.Printf("Trying to assign invalid typed value to variable %s\n", stmt.Variable)
+	}
+
+	variable.Type = val.Type
 	variable.Value = val
 	i.environment.Assign(stmt.Variable, variable)
-	return val
+
+	return AvaVal{
+		Type: Void,
+	}
 }
 
-func (i *Interp) VisitStructDecl(decl ast.StructDecl) any {
+func (i *Interp) VisitStructDecl(decl StructDecl) AvaVal {
 	if _, ok := i.structs[decl.Name]; ok {
 		fmt.Printf("Redefining struct %s is not allowed.\n", decl.Name)
 		os.Exit(1)
 	}
 
-	i.structs[decl.Name] = types.StructDefinition{
+	v := StructDefinition{
 		Name: decl.Name,
 	}
-	return i.structs[decl.Name]
+	i.structs[decl.Name] = v
+
+	return AvaVal{
+		Type: Void,
+	}
 }

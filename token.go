@@ -10,7 +10,6 @@ const (
 	FLOAT
 	STRING
 	BOOL
-	NIL
 
 	OPERATOR
 

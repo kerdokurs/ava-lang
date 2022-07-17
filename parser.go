@@ -1,7 +1,6 @@
 package main
 
 import (
-	. "kerdo.dev/ava/ast"
 	"log"
 	"math/big"
 	"strconv"
@@ -318,7 +317,7 @@ func (p *Parser) primaryExpr() Expr {
 }
 
 func (p *Parser) funcExpr() Expr {
-	p.expectAnyType([]TokenType{INT, HEX, FLOAT, STRING, BOOL, NIL, IDENT, LPAREN})
+	p.expectAnyType([]TokenType{INT, HEX, FLOAT, STRING, BOOL, IDENT, LPAREN})
 	t := p.consume()
 
 	switch t.Type {
@@ -334,8 +333,6 @@ func (p *Parser) funcExpr() Expr {
 		return p.stringLit(t)
 	case BOOL:
 		return p.boolLit(t)
-	case NIL:
-		return p.nilLit(t)
 	case IDENT:
 		return p.variableOrFuncCall(t)
 	}
@@ -390,10 +387,6 @@ func (p *Parser) variableOrFuncCall(t Token) Expr {
 		Name: name,
 		Args: args,
 	}
-}
-
-func (p *Parser) nilLit(_ Token) NilLit {
-	return NilLit{}
 }
 
 func (p *Parser) boolLit(t Token) BoolLit {

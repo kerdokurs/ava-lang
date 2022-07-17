@@ -209,8 +209,6 @@ func (l *Lexer) readIdentOrKeyword() Token {
 		typ = KEYWORD
 	} else if contains(intrinsicTypes, data) {
 		typ = ITYPE
-	} else if data == "nil" {
-		typ = NIL
 	} else if data == "true" || data == "false" {
 		typ = BOOL
 	}
