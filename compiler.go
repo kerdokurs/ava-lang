@@ -110,6 +110,11 @@ func (c *Compiler) VisitIfStmt(stmt ast.IfStmt) any {
 	panic("implement me")
 }
 
+func (c *Compiler) VisitWhileStmt(stmt ast.WhileStmt) any {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *Compiler) VisitAssignStmt(stmt ast.AssignStmt) any {
 	//TODO implement me
 	panic("implement me")

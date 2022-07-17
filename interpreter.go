@@ -100,6 +100,23 @@ func (i *Interp) VisitFuncCall(call ast.FuncCall) any {
 			a := i.Visit(call.Args[0])
 			b := i.Visit(call.Args[1])
 			return a == b
+		case "<":
+			a := i.Visit(call.Args[0])
+			b := i.Visit(call.Args[1])
+			aInt := 0
+			bInt := 0
+
+			if aInt, ok = a.(int); !ok {
+				fmt.Printf("< comparison is only supported with integer types.")
+				os.Exit(1)
+			}
+
+			if bInt, ok = b.(int); !ok {
+				fmt.Printf("< comparison is only supported with integer types.")
+				os.Exit(1)
+			}
+
+			return aInt < bInt
 		default:
 			fmt.Printf("Comparison %s is not supported yet.", call.Name)
 		}
@@ -312,6 +329,27 @@ func (i *Interp) VisitIfStmt(stmt ast.IfStmt) any {
 
 	if stmt.HasElse {
 		return i.Visit(stmt.ElseBody)
+	}
+
+	return nil
+}
+
+func (i *Interp) VisitWhileStmt(stmt ast.WhileStmt) any {
+	for {
+		cond := i.Visit(stmt.Condition)
+
+		var val bool
+		var ok bool
+		if val, ok = cond.(bool); !ok {
+			fmt.Printf("Condition must be bool")
+			os.Exit(1)
+		}
+
+		if !val {
+			break
+		}
+
+		i.Visit(stmt.Body)
 	}
 
 	return nil

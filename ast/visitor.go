@@ -11,6 +11,7 @@ type Visitor interface {
 	VisitBlock(Block) any
 
 	VisitIfStmt(IfStmt) any
+	VisitWhileStmt(WhileStmt) any
 
 	VisitAssignStmt(AssignStmt) any
 

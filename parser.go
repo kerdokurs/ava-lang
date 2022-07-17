@@ -70,6 +70,9 @@ func (p *Parser) stmt() Stmt {
 	} else if t.Data == "if" {
 		p.consume()
 		return p.ifStmt()
+	} else if t.Data == "while" {
+		p.consume()
+		return p.whileStmt()
 	} else if t.Type == IDENT {
 		return p.assignmentOrExpr()
 	}
@@ -104,7 +107,17 @@ func (p *Parser) assignmentOrExpr() Stmt {
 	}
 }
 
-func (p *Parser) ifStmt() Stmt {
+func (p *Parser) whileStmt() WhileStmt {
+	cond := p.compExpr()
+	body := p.block()
+
+	return WhileStmt{
+		Condition: cond,
+		Body:      body,
+	}
+}
+
+func (p *Parser) ifStmt() IfStmt {
 	cond := p.compExpr()
 	thenBlock := p.block()
 	elseBlock := Block{}

@@ -22,12 +22,15 @@ fun test(a: u8) -> void {
         a = 5;
         Print(a);
     }
+
+    var n = 0;
+    while n < 5 {
+        n = n + 1;
+    }
 }
 
 fun main() -> void {
     test(10);
     test(0);
     Print(a);
-    ab = 50;
-    Print(ab);
 }
