@@ -47,7 +47,7 @@ func (p *Parser) Parse() ProgStmt {
 }
 
 func (p *Parser) glblStmt() GlblStmt {
-	p.expectAny([]string{"fun", "const", "var"})
+	p.expectAny([]string{"fun", "const", "var", "struct"})
 	t := p.consume()
 
 	if t.Data == "fun" {
@@ -56,6 +56,8 @@ func (p *Parser) glblStmt() GlblStmt {
 		return p.constDecl()
 	} else if t.Data == "var" {
 		return p.varDecl()
+	} else if t.Data == "struct" {
+		return p.structDecl()
 	}
 
 	return FuncDecl{}
@@ -134,6 +136,45 @@ func (p *Parser) ifStmt() IfStmt {
 		ThenBody:  thenBlock,
 		HasElse:   hasElse,
 		ElseBody:  elseBlock,
+	}
+}
+
+func (p *Parser) structBodyDecl() []StructField {
+	p.expectAndConsume(LCURLY, "")
+
+	fields := make([]StructField, 0)
+
+	for {
+		cur := p.cur()
+		if cur.Type == RCURLY {
+			break
+		}
+
+		variable := p.expectAndConsume(IDENT, "")
+		p.expectAndConsume(OPERATOR, ":")
+
+		p.expectAnyType([]TokenType{ITYPE, IDENT})
+		typ := p.consume()
+		p.expectAndConsume(COMMA, ",")
+
+		field := StructField{
+			Name: variable.Data,
+			Type: typ.Data,
+		}
+		fields = append(fields, field)
+	}
+
+	p.expectAndConsume(RCURLY, "")
+	return fields
+}
+
+func (p *Parser) structDecl() StructDecl {
+	name := p.expectAndConsume(IDENT, "")
+	fields := p.structBodyDecl()
+	p.expectAndConsume(SEMI, "")
+	return StructDecl{
+		Name:   name.Data,
+		Fields: fields,
 	}
 }
 

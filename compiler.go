@@ -115,6 +115,11 @@ func (c *Compiler) VisitWhileStmt(stmt ast.WhileStmt) any {
 	panic("implement me")
 }
 
+func (c *Compiler) VisitStructDecl(decl ast.StructDecl) any {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (c *Compiler) VisitAssignStmt(stmt ast.AssignStmt) any {
 	//TODO implement me
 	panic("implement me")

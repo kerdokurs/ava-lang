@@ -15,6 +15,7 @@ type Interp struct {
 
 	environment *Environment[types.AvaVar]
 	functions   map[string]types.FunctionDefinition
+	structs     map[string]types.StructDefinition
 }
 
 func (i *Interp) VisitExprStmt(stmt ast.ExprStmt) any {
@@ -30,6 +31,7 @@ func NewInterpretator(source io.Reader) *Interp {
 		tree:        tree,
 		environment: NewEnvironment[types.AvaVar](),
 		functions:   make(map[string]types.FunctionDefinition),
+		structs:     make(map[string]types.StructDefinition),
 	}
 }
 
@@ -368,4 +370,16 @@ func (i *Interp) VisitAssignStmt(stmt ast.AssignStmt) any {
 	variable.Value = val
 	i.environment.Assign(stmt.Variable, variable)
 	return val
+}
+
+func (i *Interp) VisitStructDecl(decl ast.StructDecl) any {
+	if _, ok := i.structs[decl.Name]; ok {
+		fmt.Printf("Redefining struct %s is not allowed.\n", decl.Name)
+		os.Exit(1)
+	}
+
+	i.structs[decl.Name] = types.StructDefinition{
+		Name: decl.Name,
+	}
+	return i.structs[decl.Name]
 }

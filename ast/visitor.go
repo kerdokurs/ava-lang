@@ -13,6 +13,8 @@ type Visitor interface {
 	VisitIfStmt(IfStmt) any
 	VisitWhileStmt(WhileStmt) any
 
+	VisitStructDecl(StructDecl) any
+
 	VisitAssignStmt(AssignStmt) any
 
 	VisitExprStmt(ExprStmt) any
