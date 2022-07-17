@@ -6,13 +6,11 @@ import (
 	"strings"
 )
 
-const Debug = true
-
 func CreateAst(source io.Reader) ProgStmt {
 	lexer := NewLexer(source)
 	tokens := lexer.ReadAllTokens()
 
-	if Debug {
+	if IsDebug {
 		for i, token := range tokens {
 			fmt.Printf("%d -> %+v\n", i, token)
 		}

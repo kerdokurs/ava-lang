@@ -248,6 +248,9 @@ func (i *Interp) findAndRunBuiltInFunction(call FuncCall) AvaVal {
 			returnType = Int
 		case "string":
 			returnType = String
+		default:
+			fmt.Printf("Returning type %s from a builtin function is not supported yet.")
+			os.Exit(1)
 		}
 	}
 

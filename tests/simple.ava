@@ -1,0 +1,5 @@
+loc tests::what;
+
+fun main() -> void {
+    Print(1);
+}

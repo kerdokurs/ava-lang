@@ -23,7 +23,4 @@ fun main() -> void {
     test(10);
     test(0);
     Print(a);
-
-    var inp = Input();
-    Print(inp);
 }
