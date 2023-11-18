@@ -1,0 +1,14 @@
+fun test() {
+  let x = 0;
+  while x < 10 {
+    putint(x);
+    return x;
+  }
+}
+
+fun main() {
+  test();
+  let y = test();
+  putint(y);
+  putint(test());
+}
