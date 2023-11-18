@@ -37,7 +37,7 @@ const (
 	PutStr
 )
 
-var EnumToString = map[InstructionType]string{
+var InstEnumToString = map[InstructionType]string{
 	Hlt:           "HALT",
 	LoadImmediate: "LOAD IMMEDIATE",
 	Load:          "LOAD",

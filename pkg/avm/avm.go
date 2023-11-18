@@ -30,7 +30,7 @@ type AVM struct {
 	callStack []int
 }
 
-func New() *AVM {
+func NewVM() *AVM {
 	vm := &AVM{
 		Stack:     make([]int, 0),
 		Heap:      make([]byte, 0),
@@ -97,7 +97,7 @@ func (vm *AVM) LinkLabels() {
 	}
 }
 
-func (vm *AVM) Run() {
+func (vm *AVM) Run() int {
 	fmt.Println("starting VM execution at", vm.programCounter)
 
 	for ; vm.programCounter < len(vm.Bytecode); vm.programCounter += 1 {
@@ -106,6 +106,8 @@ func (vm *AVM) Run() {
 		instruction.Execute(vm)
 		// fmt.Println(vm.Stack)
 	}
+
+	return vm.pop()
 }
 
 func (vm *AVM) SetStart(start int) {

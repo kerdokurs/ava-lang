@@ -15,7 +15,7 @@ func main() {
 		'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '\n', 0,
 	}
 	helloWorld := 0
-	vm := avm.New()
+	vm := avm.NewVM()
 	vm.Static = static
 	loopCmp := vm.Label()
 	loopEnd := vm.Label()

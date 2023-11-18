@@ -26,15 +26,26 @@ func NewAssembler() *Assembler {
 }
 
 func (a *Assembler) Assemble() *AVM {
-	a.vm = New()
+	a.vm = NewVM()
 
 	for _, decl := range a.Prog.Decls {
 		a.assembleDecl(decl)
 	}
 
+	entryLbl := a.vm.Label()
+	a.bytecode = append(a.bytecode, Instruction{
+		Lbl, entryLbl,
+	})
+	a.bytecode = append(a.bytecode, Instruction{
+		Call, a.startLabel,
+	})
+	a.bytecode = append(a.bytecode, Instruction{
+		Hlt, 0,
+	})
+
 	a.vm.Bytecode = a.bytecode
 	a.vm.LinkLabels()
-	a.vm.programCounter = a.vm.Labels[a.startLabel]
+	a.vm.programCounter = a.vm.Labels[entryLbl]
 	return a.vm
 }
 
@@ -51,6 +62,12 @@ func (a *Assembler) assembleDecl(decl ast.Decl) {
 			Lbl, funcLabel,
 		})
 		a.assembleBlock(d.Body)
+		a.bytecode = append(a.bytecode, Instruction{
+			LoadImmediate, 0,
+		})
+		a.bytecode = append(a.bytecode, Instruction{
+			Ret, 0,
+		})
 	default:
 		fmt.Println("unsupported decl to assemble", d)
 	}

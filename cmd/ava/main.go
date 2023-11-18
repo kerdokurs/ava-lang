@@ -36,13 +36,14 @@ func main() {
 	avmAssembler.Prog = program
 	vm := avmAssembler.Assemble()
 	for i, inst := range vm.Bytecode {
-		fmt.Printf("%d -> %s, %d\n", i, avm.EnumToString[inst.Type], inst.Value)
+		fmt.Printf("%d -> %s, %d\n", i, avm.InstEnumToString[inst.Type], inst.Value)
 	}
 
 	fmt.Println("Program output:")
-	vm.Run()
+	exitCode := vm.Run()
 	fmt.Println()
 
+	fmt.Printf("Exit code: %v\n", exitCode)
 	fmt.Printf("Labels: %+v\n", vm.Labels)
 	fmt.Printf("Registers: %+v\n", vm.Registers)
 	fmt.Printf("Stack: %+v\n", vm.Stack)
