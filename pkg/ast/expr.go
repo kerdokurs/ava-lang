@@ -27,7 +27,8 @@ type Call struct {
 
 func (l Call) exprNode() {}
 func (l Call) String() string {
-	return fmt.Sprintf("Call(%s)", l.Name)
+	exprStrs := strings.Join(utils.Map[Expr, string](l.Args, Expr.String), ",")
+	return fmt.Sprintf("Call(%s, %s)", l.Name, exprStrs)
 }
 
 type Variable struct {

@@ -55,7 +55,7 @@ func (p *Parser) decl() ast.Decl {
 }
 
 func (p *Parser) varDecl() ast.VarDecl {
-	p.expectAndConsume(lexer.Ident, "let")
+	p.expectAndConsume(lexer.Keyword, "let")
 
 	tok := p.expectAndConsume(lexer.Ident, "")
 	name := tok.Value
@@ -111,8 +111,14 @@ func (p *Parser) stmt() ast.Stmt {
 	switch p.cur().Value {
 	case "let":
 		return p.varDecl()
+	case "while":
+		return p.whileStmt()
 	case "return":
 		return p.returnStmt()
+	}
+
+	if p.cur().Type != lexer.Keyword {
+		return p.assignmentOrExpr()
 	}
 
 	expr := p.expr()
@@ -122,8 +128,45 @@ func (p *Parser) stmt() ast.Stmt {
 	}
 }
 
+func (p *Parser) assignmentOrExpr() ast.Stmt {
+	p.expect(lexer.Ident, "")
+
+	if !(p.next().Type == lexer.Operator && p.next().Value == "=") {
+		expr := p.expr()
+
+		p.expectAndConsume(lexer.Semi, "")
+		return ast.ExprStmt{
+			Expr: expr,
+		}
+	}
+
+	assignee := p.consume()
+	p.expectAndConsume(lexer.Operator, "=")
+	expr := p.expr()
+	p.expectAndConsume(lexer.Semi, "")
+
+	return ast.AssignStmt{
+		Variable: ast.Variable{
+			Name: assignee.Value,
+		},
+		Expr: expr,
+	}
+}
+
+func (p *Parser) whileStmt() ast.WhileStmt {
+	p.expectAndConsume(lexer.Keyword, "while")
+
+	expr := p.expr()
+	body := p.block()
+
+	return ast.WhileStmt{
+		Condition: expr,
+		Body:      body,
+	}
+}
+
 func (p *Parser) returnStmt() ast.ReturnStmt {
-	p.expectAndConsume(lexer.Ident, "return")
+	p.expectAndConsume(lexer.Keyword, "return")
 
 	expr := p.expr()
 	p.expectAndConsume(lexer.Semi, "")
@@ -233,10 +276,26 @@ func (p *Parser) variableOrFunctionCall() ast.Expr {
 	}
 
 	p.expectAndConsume(lexer.LParen, "")
+
+	args := make([]ast.Expr, 0)
+	for {
+		if p.cur().Type == lexer.RParen {
+			break
+		}
+
+		expr := p.expr()
+		args = append(args, expr)
+
+		if p.cur().Type != lexer.Comma {
+			break
+		}
+	}
+
 	p.expectAndConsume(lexer.RParen, "")
 
 	return ast.Call{
 		Name: name.Value,
+		Args: args,
 	}
 }
 

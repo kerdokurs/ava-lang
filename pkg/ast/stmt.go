@@ -37,7 +37,17 @@ type ExprStmt struct {
 
 func (s ExprStmt) stmtNode() {}
 func (s ExprStmt) String() string {
-	return fmt.Sprintf("Stmt(%s)", s.Expr.String())
+	return fmt.Sprintf("ExprStmt(%s)", s.Expr.String())
+}
+
+type WhileStmt struct {
+	Condition Expr
+	Body      Block
+}
+
+func (s WhileStmt) stmtNode() {}
+func (s WhileStmt) String() string {
+	return fmt.Sprintf("While(%s, %s)", s.Condition.String(), s.Body.String())
 }
 
 type ReturnStmt struct {
@@ -47,4 +57,14 @@ type ReturnStmt struct {
 func (s ReturnStmt) stmtNode() {}
 func (s ReturnStmt) String() string {
 	return fmt.Sprintf("Return(%s)", s.Expr.String())
+}
+
+type AssignStmt struct {
+	Variable Variable
+	Expr     Expr
+}
+
+func (s AssignStmt) stmtNode() {}
+func (s AssignStmt) String() string {
+	return fmt.Sprintf("Assign(%s, %s)", s.Variable.String(), s.Expr.String())
 }

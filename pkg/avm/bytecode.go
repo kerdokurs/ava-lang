@@ -19,6 +19,7 @@ const (
 	LoadImmediate
 	Load
 	Store
+	Pop
 	Add
 	Sub
 	Lt
@@ -41,6 +42,7 @@ var EnumToString = map[InstructionType]string{
 	LoadImmediate: "LOAD IMMEDIATE",
 	Load:          "LOAD",
 	Store:         "STORE",
+	Pop:           "POP",
 	Add:           "ADD",
 	Sub:           "SUB",
 	Lt:            "LT",
@@ -50,6 +52,7 @@ var EnumToString = map[InstructionType]string{
 	Lbl:           "LBL",
 	Call:          "CALL",
 	Ret:           "RET",
+	PutInt:        "PUT INT",
 }
 
 func (i *Instruction) Execute(vm *AVM) {
@@ -65,6 +68,8 @@ func (i *Instruction) Execute(vm *AVM) {
 		value := vm.pop()
 		reg := Register(i.Value)
 		vm.Registers[reg] = value
+	case Pop:
+		vm.pop()
 	case Add:
 		a := vm.pop()
 		b := vm.pop()
@@ -74,8 +79,8 @@ func (i *Instruction) Execute(vm *AVM) {
 		b := vm.pop()
 		vm.push(a - b)
 	case Lt:
-		rhs := vm.pop()
 		lhs := vm.pop()
+		rhs := vm.pop()
 		var value int
 		if lhs < rhs {
 			value = 1

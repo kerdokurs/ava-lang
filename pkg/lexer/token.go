@@ -49,3 +49,7 @@ func (t *Token) Name() string {
 func Name(typ TokenType) string {
 	return enumToString[typ]
 }
+
+var keywords = []string{
+	"let", "fun", "return", "while",
+}

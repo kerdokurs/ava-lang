@@ -104,7 +104,7 @@ func (vm *AVM) Run() {
 		instruction := &vm.Bytecode[vm.programCounter]
 
 		instruction.Execute(vm)
-		fmt.Println(vm.Stack)
+		// fmt.Println(vm.Stack)
 	}
 }
 

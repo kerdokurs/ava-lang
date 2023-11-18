@@ -78,6 +78,39 @@ func (a *Assembler) assembleStmt(stmt ast.Stmt) {
 		})
 	case ast.ExprStmt:
 		a.assembleExpr(s.Expr)
+		a.bytecode = append(a.bytecode, Instruction{
+			Pop, 0,
+		})
+	case ast.WhileStmt:
+		loopLbl := a.vm.Label()
+		endLbl := a.vm.Label()
+		a.bytecode = append(a.bytecode, Instruction{
+			Lbl, loopLbl,
+		})
+		a.assembleExpr(s.Condition)
+		a.bytecode = append(a.bytecode, Instruction{
+			Jz, endLbl,
+		})
+		a.assembleBlock(s.Body)
+		a.bytecode = append(a.bytecode, Instruction{
+			Jmp, loopLbl,
+		})
+		a.bytecode = append(a.bytecode, Instruction{
+			Lbl, endLbl,
+		})
+	case ast.AssignStmt:
+		// compute expr
+		// store
+		a.assembleExpr(s.Expr)
+		varIndex, ok := a.variableIndex[s.Variable.Name]
+		if !ok {
+			fmt.Println("no variable found with name", s.Variable.Name)
+			return
+		}
+
+		a.bytecode = append(a.bytecode, Instruction{
+			Store, int(GPR0) + varIndex,
+		})
 	default:
 		fmt.Println("unsupported stmt to assemble", s)
 	}
@@ -102,18 +135,33 @@ func (a *Assembler) assembleExpr(expr ast.Expr) {
 	case ast.Call:
 		funcLabel, ok := a.funcLabels[e.Name]
 		if !ok {
-			if e.Name == "+" || e.Name == "-" {
+			if e.Name == "+" || e.Name == "-" || e.Name == "<" {
 				a.assembleExpr(e.Args[1])
 				a.assembleExpr(e.Args[0])
 
 				op := Add
 				if e.Name == "-" {
 					op = Sub
+				} else if e.Name == "<" {
+					op = Lt
 				}
 
 				a.bytecode = append(a.bytecode, Instruction{
 					op, 0,
 				})
+			} else if e.Name == "putint" {
+				for i := len(e.Args) - 1; i >= 0; i-- {
+					a.assembleExpr(e.Args[i])
+				}
+
+				a.bytecode = append(a.bytecode, Instruction{
+					PutInt, 0,
+				})
+				a.bytecode = append(a.bytecode, Instruction{
+					LoadImmediate, 0,
+				})
+			} else if e.Name == "+=" {
+
 			} else {
 				fmt.Println("no function named", e.Name)
 			}

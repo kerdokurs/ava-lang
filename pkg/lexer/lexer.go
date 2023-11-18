@@ -125,11 +125,16 @@ func (l *Lexer) readIdentOrKeyword() Token {
 		sb.WriteRune(r)
 	}
 
+	value := sb.String()
+
 	var tokenType TokenType = Ident
+	if utils.Contains(keywords, value) {
+		tokenType = Keyword
+	}
 
 	return Token{
 		Type:  tokenType,
-		Value: sb.String(),
+		Value: value,
 	}
 }
 
