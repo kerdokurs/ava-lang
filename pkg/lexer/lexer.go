@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"unicode"
 
@@ -68,10 +69,56 @@ func (l *Lexer) nextToken() Token {
 			return l.readSingleChar(RCurly)
 		} else if r == ';' {
 			return l.readSingleChar(Semi)
+		} else if r == '"' {
+			return l.readString()
 		}
 
 		fmt.Printf("unimplemented: %c\n", r)
 		return Token{}
+	}
+}
+
+func (l *Lexer) readString() Token {
+	_, _, err := l.reader.ReadRune()
+	if err != nil {
+		panic(err)
+	}
+
+	sb := strings.Builder{}
+
+	for {
+		r, _, err := l.reader.ReadRune()
+		if err != nil {
+			panic(err)
+		}
+
+		if r == '\\' {
+			next, _, err := l.reader.ReadRune()
+			if err != nil {
+				panic(err)
+			}
+
+			if next == '"' {
+				sb.WriteRune('"')
+				continue
+			} else if next == 'n' {
+				sb.WriteRune('\n')
+				continue
+			} else {
+				fmt.Printf("unsupported escape character %c\n", next)
+				os.Exit(1)
+				l.reader.UnreadRune()
+			}
+		} else if r == '"' {
+			break
+		}
+
+		sb.WriteRune(r)
+	}
+
+	return Token{
+		Type:  String,
+		Value: sb.String(),
 	}
 }
 

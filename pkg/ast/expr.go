@@ -48,3 +48,12 @@ func (l IntLiteral) exprNode() {}
 func (l IntLiteral) String() string {
 	return fmt.Sprintf("Int(%d)", l.Value)
 }
+
+type StringLiteral struct {
+	Value string
+}
+
+func (l StringLiteral) exprNode() {}
+func (l StringLiteral) String() string {
+	return fmt.Sprintf("String(\"%s\")", l.Value)
+}

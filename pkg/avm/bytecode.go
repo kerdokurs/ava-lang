@@ -16,6 +16,8 @@ type InstructionExecutionFunc func(vm *AVM) int
 
 const (
 	Hlt InstructionType = iota
+	Trap
+
 	LoadImmediate
 	Load
 	Store
@@ -39,6 +41,7 @@ const (
 
 var InstEnumToString = map[InstructionType]string{
 	Hlt:           "HALT",
+	Trap:          "TRAP",
 	LoadImmediate: "LOAD IMMEDIATE",
 	Load:          "LOAD",
 	Store:         "STORE",
@@ -53,12 +56,16 @@ var InstEnumToString = map[InstructionType]string{
 	Call:          "CALL",
 	Ret:           "RET",
 	PutInt:        "PUT INT",
+	PutCStr:       "PUT CSTR",
 }
 
 func (i *Instruction) Execute(vm *AVM) {
 	switch i.Type {
 	case Hlt:
 		fmt.Println("HALT")
+	case Trap:
+		fmt.Println("TRAP")
+		vm.programCounter = len(vm.Bytecode) - 1
 	case LoadImmediate:
 		vm.push(i.Value)
 	case Load:

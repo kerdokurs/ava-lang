@@ -1,14 +1,16 @@
 fun test() {
   let x = 0;
-  while x < 10 {
-    putint(x);
-    return x;
+  let i = 0;
+  while i < 10 {
+    x = x + i;
+    i = i + 1;
   }
+  return x;
 }
 
 fun main() {
-  test();
-  let y = test();
-  putint(y);
-  putint(test());
+  let x = test();
+  let y = "testing strings\n";
+  putint(x);
+  putstr(y);
 }

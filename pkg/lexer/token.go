@@ -12,6 +12,7 @@ const (
 
 	Int
 	Float
+	String
 
 	Ident
 	Keyword
@@ -31,6 +32,7 @@ var enumToString = []string{
 	"EOF",
 	"INT",
 	"FLOAT",
+	"STRING",
 	"IDENTIFIER",
 	"KEYWORD",
 	"LPAREN",

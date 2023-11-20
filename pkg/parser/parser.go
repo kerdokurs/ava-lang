@@ -92,6 +92,13 @@ func (p *Parser) funcDecl() ast.FuncDecl {
 	}
 }
 
+func (p *Parser) string() ast.StringLiteral {
+	tok := p.consume()
+	return ast.StringLiteral{
+		Value: tok.Value,
+	}
+}
+
 func (p *Parser) block() ast.Block {
 	p.expectAndConsume(lexer.LCurly, "")
 
@@ -259,6 +266,10 @@ func (p *Parser) primaryExpr() ast.Expr {
 		return p.intLiteral()
 	case lexer.Ident:
 		return p.variableOrFunctionCall()
+	case lexer.LCurly:
+		return p.block()
+	case lexer.String:
+		return p.string()
 	}
 
 	fmt.Println("unimplemented primaryExpr", t.Type, t.Value)

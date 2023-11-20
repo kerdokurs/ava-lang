@@ -15,6 +15,8 @@ type Assembler struct {
 	funcLabels    map[string]int
 	variableIndex map[string]int
 
+	stringAddrs map[string]int
+
 	startLabel int
 }
 
@@ -22,11 +24,13 @@ func NewAssembler() *Assembler {
 	return &Assembler{
 		funcLabels:    make(map[string]int),
 		variableIndex: make(map[string]int),
+		stringAddrs:   make(map[string]int),
 	}
 }
 
 func (a *Assembler) Assemble() *AVM {
 	a.vm = NewVM()
+	a.vm.Static = make([]byte, 0)
 
 	for _, decl := range a.Prog.Decls {
 		a.assembleDecl(decl)
@@ -177,8 +181,16 @@ func (a *Assembler) assembleExpr(expr ast.Expr) {
 				a.bytecode = append(a.bytecode, Instruction{
 					LoadImmediate, 0,
 				})
+			} else if e.Name == "putstr" {
+				a.assembleExpr(e.Args[0])
+				a.bytecode = append(a.bytecode, Instruction{
+					PutCStr, 0,
+				})
+				a.bytecode = append(a.bytecode, Instruction{
+					LoadImmediate, 0,
+				})
 			} else if e.Name == "+=" {
-
+				panic("assembling += not implemented")
 			} else {
 				fmt.Println("no function named", e.Name)
 			}
@@ -187,6 +199,15 @@ func (a *Assembler) assembleExpr(expr ast.Expr) {
 
 		a.bytecode = append(a.bytecode, Instruction{
 			Call, funcLabel,
+		})
+	case ast.StringLiteral:
+		addr := len(a.vm.Static)
+		for _, ch := range e.Value {
+			a.vm.Static = append(a.vm.Static, byte(ch))
+		}
+		a.vm.Static = append(a.vm.Static, 0)
+		a.bytecode = append(a.bytecode, Instruction{
+			Load, addr,
 		})
 	default:
 		fmt.Println("unsupported expr to assemble", e)
