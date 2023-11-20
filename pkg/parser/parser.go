@@ -61,17 +61,20 @@ func (p *Parser) varDecl() ast.VarDecl {
 	name := tok.Value
 
 	var expr ast.Expr
+	hasInit := false
 	if p.cur().Type != lexer.Semi {
 		// has assign expr
 		p.expectAndConsume(lexer.Operator, "=")
 		expr = p.expr()
+		hasInit = true
 	}
 
 	p.expectAndConsume(lexer.Semi, "")
 
 	return ast.VarDecl{
-		Name: name,
-		Expr: expr,
+		Name:    name,
+		Expr:    expr,
+		HasInit: hasInit,
 	}
 }
 

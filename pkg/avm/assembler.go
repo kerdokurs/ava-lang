@@ -18,6 +18,8 @@ type Assembler struct {
 	stringAddrs map[string]int
 
 	startLabel int
+
+	scopeStack []*Scope
 }
 
 func NewAssembler() *Assembler {
@@ -25,6 +27,7 @@ func NewAssembler() *Assembler {
 		funcLabels:    make(map[string]int),
 		variableIndex: make(map[string]int),
 		stringAddrs:   make(map[string]int),
+		scopeStack:    make([]*Scope, 0),
 	}
 }
 
@@ -37,15 +40,10 @@ func (a *Assembler) Assemble() *AVM {
 	}
 
 	entryLbl := a.vm.Label()
-	a.bytecode = append(a.bytecode, Instruction{
-		Lbl, entryLbl,
-	})
-	a.bytecode = append(a.bytecode, Instruction{
-		Call, a.startLabel,
-	})
-	a.bytecode = append(a.bytecode, Instruction{
-		Hlt, 0,
-	})
+	a.emit(Lbl, entryLbl)
+	a.emit(Call, a.startLabel)
+	a.emit(Store, int(GPR0))
+	a.emit(Hlt)
 
 	a.vm.Bytecode = a.bytecode
 	a.vm.LinkLabels()
@@ -60,15 +58,32 @@ func (a *Assembler) assembleDecl(decl ast.Decl) {
 		if d.Name == "main" {
 			a.startLabel = funcLabel
 		}
-
 		a.funcLabels[d.Name] = funcLabel
+
 		a.bytecode = append(a.bytecode, Instruction{
 			Lbl, funcLabel,
 		})
+
+		localCount := d.Body.CountLocals()
+		scope := a.Scope()
+		scope.LocalCount = localCount
+		a.assemblePushFrame(scope)
+
+		fnStart := len(a.bytecode)
+
 		a.assembleBlock(d.Body)
-		a.bytecode = append(a.bytecode, Instruction{
-			LoadImmediate, 0,
-		})
+
+		cleanupLbl := a.vm.Label()
+		a.emit(Lbl, cleanupLbl)
+		a.assemblePopFrame(scope)
+		a.PopScope()
+
+		for i := fnStart; i < len(a.bytecode); i++ {
+			if a.bytecode[i].Type == Ret {
+				a.bytecode[i] = Instruction{Jmp, cleanupLbl}
+			}
+		}
+
 		a.bytecode = append(a.bytecode, Instruction{
 			Ret, 0,
 		})
@@ -83,15 +98,52 @@ func (a *Assembler) assembleBlock(block ast.Block) {
 	}
 }
 
+func (a *Assembler) assemblePushFrame(scope *Scope) {
+	// Frame description:
+	// GPR0 - return value
+	// [0] - old FP
+	// [0..n] - arguments, only if function body
+	// [n+1..m] - local variables
+
+	// store old FP
+	a.emit(Load, int(FP))
+	a.emit(Load, int(FP))
+	a.emit(LoadImmediate, scope.LocalCount+1)
+	a.emit(Add, 0)
+	a.emit(Store, int(FP))
+	for i := 0; i < scope.LocalCount; i++ {
+		a.emit(LoadImmediate, 0)
+	}
+	// a.emit(Store, int(GPR2))
+	// // GPR2 = old fp
+	// a.emit(Inc, int(GPR2))
+	// a.emit(Load, int(GPR2))
+}
+
+func (a *Assembler) assemblePopFrame(scope *Scope) {
+	// put push GPR0 to stack
+	a.emit(Store, int(GPR0))
+
+	for i := 0; i < scope.LocalCount; i++ {
+		a.emit(Pop)
+	}
+
+	a.emit(Store, int(FP))
+}
+
 func (a *Assembler) assembleStmt(stmt ast.Stmt) {
 	switch s := stmt.(type) {
 	case ast.VarDecl:
-		a.assembleExpr(s.Expr)
-		varIndex := len(a.variableIndex)
-		a.variableIndex[s.Name] = varIndex
-		a.bytecode = append(a.bytecode, Instruction{
-			Store, int(GPR0) + varIndex,
-		})
+		scope := a.currentScope()
+		varIndex := len(scope.LocalVariableIndices)
+		scope.LocalVariableIndices[s.Name] = varIndex
+		fmt.Printf("%s got index %d\n", s.Name, varIndex)
+		if s.HasInit {
+			a.assembleExpr(s.Expr)
+			a.bytecode = append(a.bytecode, Instruction{
+				StoreA, varIndex,
+			})
+		}
 	case ast.ReturnStmt:
 		a.assembleExpr(s.Expr)
 		a.bytecode = append(a.bytecode, Instruction{
@@ -99,9 +151,7 @@ func (a *Assembler) assembleStmt(stmt ast.Stmt) {
 		})
 	case ast.ExprStmt:
 		a.assembleExpr(s.Expr)
-		a.bytecode = append(a.bytecode, Instruction{
-			Pop, 0,
-		})
+		a.emit(Pop)
 	case ast.WhileStmt:
 		loopLbl := a.vm.Label()
 		endLbl := a.vm.Label()
@@ -123,14 +173,15 @@ func (a *Assembler) assembleStmt(stmt ast.Stmt) {
 		// compute expr
 		// store
 		a.assembleExpr(s.Expr)
-		varIndex, ok := a.variableIndex[s.Variable.Name]
+		scope := a.currentScope()
+		varIndex, ok := scope.LocalVariableIndices[s.Variable.Name]
 		if !ok {
 			fmt.Println("no variable found with name", s.Variable.Name)
 			return
 		}
 
 		a.bytecode = append(a.bytecode, Instruction{
-			Store, int(GPR0) + varIndex,
+			StoreA, int(GPR0) + varIndex,
 		})
 	default:
 		fmt.Println("unsupported stmt to assemble", s)
@@ -144,15 +195,14 @@ func (a *Assembler) assembleExpr(expr ast.Expr) {
 			LoadImmediate, e.Value,
 		})
 	case ast.Variable:
-		varIndex, ok := a.variableIndex[e.Name]
+		scope := a.currentScope()
+		varOffset, ok := scope.LocalVariableIndices[e.Name]
 		if !ok {
-			fmt.Println("no variable named", e.Name)
+			fmt.Printf("no variable named %s in current scope\n", e.Name)
 			return
 		}
 
-		a.bytecode = append(a.bytecode, Instruction{
-			Load, int(GPR0) + varIndex,
-		})
+		a.emit(LoadA, varOffset)
 	case ast.Call:
 		funcLabel, ok := a.funcLabels[e.Name]
 		if !ok {
@@ -212,4 +262,34 @@ func (a *Assembler) assembleExpr(expr ast.Expr) {
 	default:
 		fmt.Println("unsupported expr to assemble", e)
 	}
+}
+
+func (a *Assembler) emit(code InstructionType, arg ...int) {
+	opArg := 0
+	if len(arg) > 0 {
+		opArg = arg[0]
+	}
+	a.bytecode = append(a.bytecode, Instruction{
+		code, opArg,
+	})
+}
+
+type Scope struct {
+	LocalCount           int
+	LocalVariableIndices map[string]int
+}
+
+func (a *Assembler) Scope() *Scope {
+	scope := new(Scope)
+	scope.LocalVariableIndices = make(map[string]int)
+	a.scopeStack = append(a.scopeStack, scope)
+	return scope
+}
+
+func (a *Assembler) PopScope() {
+	a.scopeStack = a.scopeStack[:len(a.scopeStack)-1]
+}
+
+func (a *Assembler) currentScope() *Scope {
+	return a.scopeStack[len(a.scopeStack)-1]
 }

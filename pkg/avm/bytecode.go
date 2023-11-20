@@ -20,7 +20,9 @@ const (
 
 	LoadImmediate
 	Load
+	LoadA
 	Store
+	StoreA
 	Pop
 	Add
 	Sub
@@ -44,7 +46,9 @@ var InstEnumToString = map[InstructionType]string{
 	Trap:          "TRAP",
 	LoadImmediate: "LOAD IMMEDIATE",
 	Load:          "LOAD",
+	LoadA:         "LOADA",
 	Store:         "STORE",
+	StoreA:        "STOREA",
 	Pop:           "POP",
 	Add:           "ADD",
 	Sub:           "SUB",
@@ -71,10 +75,19 @@ func (i *Instruction) Execute(vm *AVM) {
 	case Load:
 		reg := Register(i.Value)
 		vm.push(vm.Registers[reg])
+	case LoadA:
+		offset := i.Value
+		localLocation := vm.Registers[FP] - offset - 1
+		vm.push(vm.Stack[localLocation])
 	case Store:
 		value := vm.pop()
 		reg := Register(i.Value)
 		vm.Registers[reg] = value
+	case StoreA:
+		offset := i.Value
+		localLocation := vm.Registers[FP] - offset - 1
+		val := vm.pop()
+		vm.Stack[localLocation] = val
 	case Pop:
 		vm.pop()
 	case Add:
@@ -110,6 +123,8 @@ func (i *Instruction) Execute(vm *AVM) {
 		pc := vm.callStack[len(vm.callStack)-1]
 		vm.callStack = vm.callStack[:len(vm.callStack)-1]
 		vm.programCounter = pc
+
+		vm.push(vm.Registers[GPR0])
 	case Inc:
 		reg := Register(i.Value)
 		vm.Registers[reg]++

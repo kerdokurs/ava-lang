@@ -10,6 +10,8 @@ const (
 	GPR2
 	GPR3
 
+	FP
+
 	RegisterCount
 )
 
@@ -104,10 +106,10 @@ func (vm *AVM) Run() int {
 		instruction := &vm.Bytecode[vm.programCounter]
 
 		instruction.Execute(vm)
-		// fmt.Println(vm.Stack)
+		fmt.Printf("%s, %d -> %v\n", InstEnumToString[instruction.Type], instruction.Value, vm.Stack)
 	}
 
-	return vm.pop()
+	return vm.Registers[GPR0]
 }
 
 func (vm *AVM) SetStart(start int) {

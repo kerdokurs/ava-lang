@@ -22,13 +22,18 @@ func (s *ProgStmt) String() string {
 }
 
 type VarDecl struct {
-	Name string
-	Expr Expr
+	Name    string
+	Expr    Expr
+	HasInit bool
 }
 
 func (d VarDecl) stmtNode() {}
 func (d VarDecl) String() string {
-	return fmt.Sprintf("VarDecl(%s, %s)", d.Name, d.Expr.String())
+	exprStr := "nil"
+	if d.HasInit {
+		exprStr = d.Expr.String()
+	}
+	return fmt.Sprintf("VarDecl(%s, %s)", d.Name, exprStr)
 }
 
 type ExprStmt struct {
