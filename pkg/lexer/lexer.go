@@ -71,9 +71,12 @@ func (l *Lexer) nextToken() Token {
 			return l.readSingleChar(Semi)
 		} else if r == '"' {
 			return l.readString()
+		} else if r == ':' {
+			return l.readSingleChar(Colon)
 		}
 
-		fmt.Printf("unimplemented: %c\n", r)
+		fmt.Printf("unimplemented: '%c'\n", r)
+		os.Exit(1)
 		return Token{}
 	}
 }

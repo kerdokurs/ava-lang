@@ -1,6 +1,8 @@
 package avm
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Register int
 
@@ -30,6 +32,9 @@ type AVM struct {
 	Static []byte
 
 	callStack []int
+
+	StdIn    []byte
+	StdInPtr int
 }
 
 func NewVM() *AVM {
@@ -89,12 +94,9 @@ func (vm *AVM) NewString(cstrPtr int) int {
 }
 
 func (vm *AVM) LinkLabels() {
-	lblCounter := 0
 	for i, inst := range vm.Bytecode {
 		if inst.Type == Lbl {
-			vm.Labels[lblCounter] = i
-			vm.Bytecode[i].Value = i
-			lblCounter++
+			vm.Labels[inst.Value] = i
 		}
 	}
 }
@@ -106,7 +108,8 @@ func (vm *AVM) Run() int {
 		instruction := &vm.Bytecode[vm.programCounter]
 
 		instruction.Execute(vm)
-		fmt.Printf("%s, %d -> %v\n", InstEnumToString[instruction.Type], instruction.Value, vm.Stack)
+		// fmt.Printf("%s, %d -> %v\n", InstEnumToString[instruction.Type], instruction.Value, vm.Stack)
+		// time.Sleep(20 * time.Millisecond)
 	}
 
 	return vm.Registers[GPR0]

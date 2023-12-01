@@ -16,9 +16,7 @@ type Block struct {
 
 func (b Block) exprNode() {}
 func (b Block) String() string {
-	stmtStrs := strings.Join(utils.Map[Stmt, string](b.Stmts, func(s Stmt) string {
-		return s.String()
-	}), ",")
+	stmtStrs := strings.Join(utils.Map[Stmt, string](b.Stmts, Stmt.String), ",")
 	return fmt.Sprintf("Block(%s)", stmtStrs)
 }
 

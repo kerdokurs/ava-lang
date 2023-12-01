@@ -23,6 +23,7 @@ const (
 	RCurly
 
 	Semi
+	Colon
 	Comma
 
 	Operator
@@ -40,6 +41,7 @@ var enumToString = []string{
 	"LCURLY",
 	"RCURLY",
 	"SEMI COLON",
+	"COLON",
 	"COMMA",
 	"OPERATOR",
 }

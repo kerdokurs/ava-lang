@@ -60,6 +60,14 @@ func (p *Parser) varDecl() ast.VarDecl {
 	tok := p.expectAndConsume(lexer.Ident, "")
 	name := tok.Value
 
+	var varType string
+	if p.cur().Type == lexer.Colon {
+		// has type annotation
+		p.consume()
+		typeTok := p.expectAndConsume(lexer.Ident, "")
+		varType = typeTok.Value
+	}
+
 	var expr ast.Expr
 	hasInit := false
 	if p.cur().Type != lexer.Semi {
@@ -75,6 +83,7 @@ func (p *Parser) varDecl() ast.VarDecl {
 		Name:    name,
 		Expr:    expr,
 		HasInit: hasInit,
+		VarType: varType,
 	}
 }
 
@@ -87,11 +96,20 @@ func (p *Parser) funcDecl() ast.FuncDecl {
 	p.expectAndConsume(lexer.LParen, "")
 	p.expectAndConsume(lexer.RParen, "")
 
+	var returnType string
+	if p.cur().Type == lexer.Operator && p.cur().Value == "->" {
+		p.consume()
+
+		returnTypeTok := p.consume()
+		returnType = returnTypeTok.Value
+	}
+
 	body := p.block()
 
 	return ast.FuncDecl{
-		Name: name,
-		Body: body,
+		Name:       name,
+		Body:       body,
+		ReturnType: returnType,
 	}
 }
 
@@ -123,6 +141,8 @@ func (p *Parser) stmt() ast.Stmt {
 		return p.varDecl()
 	case "while":
 		return p.whileStmt()
+	case "if":
+		return p.ifStmt()
 	case "return":
 		return p.returnStmt()
 	}
@@ -160,6 +180,30 @@ func (p *Parser) assignmentOrExpr() ast.Stmt {
 			Name: assignee.Value,
 		},
 		Expr: expr,
+	}
+}
+
+func (p *Parser) ifStmt() ast.IfStmt {
+	p.expectAndConsume(lexer.Ident, "if")
+
+	expr := p.expr()
+
+	thenBody := p.block()
+
+	var elseBody ast.Block
+	var hasElse bool
+	if p.cur().Value == "else" {
+		p.consume()
+		// TODO: Handle else-if
+		elseBody = p.block()
+		hasElse = true
+	}
+
+	return ast.IfStmt{
+		Condition: expr,
+		Then:      thenBody,
+		Else:      elseBody,
+		HasElse:   hasElse,
 	}
 }
 
@@ -273,11 +317,20 @@ func (p *Parser) primaryExpr() ast.Expr {
 		return p.block()
 	case lexer.String:
 		return p.string()
+	case lexer.LParen:
+		return p.parenExpr()
 	}
 
 	fmt.Println("unimplemented primaryExpr", t.Type, t.Value)
 	os.Exit(1)
 	return nil
+}
+
+func (p *Parser) parenExpr() ast.Expr {
+	p.expectAndConsume(lexer.LParen, "")
+	expr := p.expr()
+	p.expectAndConsume(lexer.RParen, "")
+	return expr
 }
 
 func (p *Parser) variableOrFunctionCall() ast.Expr {

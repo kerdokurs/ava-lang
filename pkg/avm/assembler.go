@@ -48,6 +48,7 @@ func (a *Assembler) Assemble() *AVM {
 	a.vm.Bytecode = a.bytecode
 	a.vm.LinkLabels()
 	a.vm.programCounter = a.vm.Labels[entryLbl]
+	fmt.Println(entryLbl, a.vm.Labels[entryLbl])
 	return a.vm
 }
 
@@ -67,6 +68,7 @@ func (a *Assembler) assembleDecl(decl ast.Decl) {
 		localCount := d.Body.CountLocals()
 		scope := a.Scope()
 		scope.LocalCount = localCount
+		scope.ShouldReturn = !d.IsVoid()
 		a.assemblePushFrame(scope)
 
 		fnStart := len(a.bytecode)
@@ -75,6 +77,11 @@ func (a *Assembler) assembleDecl(decl ast.Decl) {
 
 		cleanupLbl := a.vm.Label()
 		a.emit(Lbl, cleanupLbl)
+
+		if d.IsVoid() {
+			a.emit(LoadImmediate, 0)
+		}
+
 		a.assemblePopFrame(scope)
 		a.PopScope()
 
@@ -84,9 +91,7 @@ func (a *Assembler) assembleDecl(decl ast.Decl) {
 			}
 		}
 
-		a.bytecode = append(a.bytecode, Instruction{
-			Ret, 0,
-		})
+		a.emit(Ret)
 	default:
 		fmt.Println("unsupported decl to assemble", d)
 	}
@@ -155,6 +160,7 @@ func (a *Assembler) assembleStmt(stmt ast.Stmt) {
 	case ast.WhileStmt:
 		loopLbl := a.vm.Label()
 		endLbl := a.vm.Label()
+		fmt.Printf("Loop %d -> %d\n", loopLbl, endLbl)
 		a.bytecode = append(a.bytecode, Instruction{
 			Lbl, loopLbl,
 		})
@@ -183,6 +189,26 @@ func (a *Assembler) assembleStmt(stmt ast.Stmt) {
 		a.bytecode = append(a.bytecode, Instruction{
 			StoreA, int(GPR0) + varIndex,
 		})
+	case ast.IfStmt:
+		var elseLbl int
+		if s.HasElse {
+			elseLbl = a.vm.Label()
+		}
+		endLbl := a.vm.Label()
+		a.assembleExpr(s.Condition)
+		if s.HasElse {
+			a.emit(Jz, elseLbl)
+		} else {
+			a.emit(Jz, endLbl)
+		}
+		a.assembleBlock(s.Then)
+		a.emit(Jmp, endLbl)
+		if s.HasElse {
+			a.emit(Lbl, elseLbl)
+			a.assembleBlock(s.Else)
+		}
+		a.emit(Lbl, endLbl)
+		fmt.Printf("If %d -> %d\n", elseLbl, endLbl)
 	default:
 		fmt.Println("unsupported stmt to assemble", s)
 	}
@@ -206,7 +232,7 @@ func (a *Assembler) assembleExpr(expr ast.Expr) {
 	case ast.Call:
 		funcLabel, ok := a.funcLabels[e.Name]
 		if !ok {
-			if e.Name == "+" || e.Name == "-" || e.Name == "<" {
+			if e.Name == "+" || e.Name == "-" || e.Name == "<" || e.Name == ">" || e.Name == "*" || e.Name == "/" || e.Name == "%" {
 				a.assembleExpr(e.Args[1])
 				a.assembleExpr(e.Args[0])
 
@@ -215,11 +241,26 @@ func (a *Assembler) assembleExpr(expr ast.Expr) {
 					op = Sub
 				} else if e.Name == "<" {
 					op = Lt
+				} else if e.Name == ">" {
+					op = Gt
+				} else if e.Name == "*" {
+					op = Mul
+				} else if e.Name == "/" {
+					op = Div
+				} else if e.Name == "%" {
+					op = Mod
 				}
 
-				a.bytecode = append(a.bytecode, Instruction{
-					op, 0,
-				})
+				a.emit(op)
+			} else if e.Name == "==" {
+				a.assembleExpr(e.Args[1])
+				a.assembleExpr(e.Args[0])
+				a.emit(Eq)
+			} else if e.Name == "!=" {
+				a.assembleExpr(e.Args[1])
+				a.assembleExpr(e.Args[0])
+				a.emit(Eq)
+				a.emit(Not)
 			} else if e.Name == "putint" {
 				for i := len(e.Args) - 1; i >= 0; i-- {
 					a.assembleExpr(e.Args[i])
@@ -239,6 +280,8 @@ func (a *Assembler) assembleExpr(expr ast.Expr) {
 				a.bytecode = append(a.bytecode, Instruction{
 					LoadImmediate, 0,
 				})
+			} else if e.Name == "getint" {
+				a.emit(GetInt, 0)
 			} else if e.Name == "+=" {
 				panic("assembling += not implemented")
 			} else {
@@ -277,6 +320,7 @@ func (a *Assembler) emit(code InstructionType, arg ...int) {
 type Scope struct {
 	LocalCount           int
 	LocalVariableIndices map[string]int
+	ShouldReturn         bool
 }
 
 func (a *Assembler) Scope() *Scope {
